@@ -1,0 +1,134 @@
+SOURCE OF TRUTH
+- Always implement UI according to: Documentation/PRODUCT_SPEC.md
+- If there is a conflict between chat instructions and PRODUCT_SPEC.md, ask for clarification.
+- Do not invent requirements not present in PRODUCT_SPEC.md unless explicitly asked.
+
+
+WORKFLOW
+- Follow Documentation/IMPLEMENTATION_PLAN.md for build order and phases.
+- Implement UI-first. No backend/persistence unless explicitly requested.
+
+
+DOCUMENTATION REFERENCES
+- Documentation/DESIGN_GUIDELINES.md - Visual hierarchy, spacing, typography rules
+- Documentation/COMPONENT_PATTERNS.md - How to structure components with examples
+- Documentation/MOCK_DATA_GUIDE.md - How to use and create mock data
+- Documentation/CURSOR_WORKFLOW.md - Step-by-step AI workflow
+- Documentation/TROUBLESHOOTING.md - Common issues and fixes
+- Documentation/PROJECT_CONTEXT.md - Project overview and constraints
+
+
+You are working in an iOS SwiftUI project called CalSnap.
+
+PRIMARY GOAL
+- Build the entire app UI first, screen by screen, with NO backend, NO networking, and NO persistence.
+- Every screen and reusable component MUST compile and MUST have working SwiftUI previews.
+- Previews are non-negotiable and should cover multiple states.
+
+GENERAL PRINCIPLES
+- Prefer clarity and simplicity over clever abstractions.
+- UI and UX correctness matter more than architectural perfection at this stage.
+- Assume all data comes from mock models and mock services.
+- Do not introduce backend logic, API calls, or real persistence unless explicitly requested.
+
+PROJECT STRUCTURE (MANDATORY)
+- App/
+- Features/Home/
+- Features/MealDetail/
+- Features/Settings/
+- Features/Goals/
+- DesignSystem/
+- Models/
+- MockData/
+
+
+DESIGN SYSTEM RULES
+- All colors, spacing, typography, and corner radii must come from AppTheme.
+- Do NOT hardcode magic numbers in UI unless justified.
+- Reusable UI components belong in DesignSystem/.
+- Each component must include:
+  - Normal state preview
+  - Disabled or loading state preview
+  - Edge case preview (long text, large numbers, empty state)
+
+
+COLOR SYSTEM (3-LAYER SEMANTIC)
+- Layer 1 (Brand): AppTheme.Colors.Brand.green/orange/red - Rarely used directly
+- Layer 2 (Domain): AppTheme.Colors.Domain.calories/protein/carbs/fat/fiber - Nutrition meanings
+- Layer 3 (UI Role): AppTheme.Colors.UI.textPrimary/backgroundPrimary/cardBackground - Most common
+- All colors are Asset Catalog based with automatic Light/Dark mode support
+- Never use Color.red, Color.blue, etc. - always use AppTheme.Colors
+
+
+SWIFTUI STYLE RULES
+- Use SwiftUI and iOS 17+ features.
+- Use `#Preview` instead of `PreviewProvider`.
+- Prefer `NavigationStack` over `NavigationView`.
+- Prefer `@StateObject` for ViewModels.
+- Avoid singletons unless explicitly requested.
+- Avoid UIKit unless explicitly requested.
+- Use Dynamic Type via AppTheme.Typography (not fixed font sizes).
+- Apply shadows sparingly via AppTheme.Shadows.card or .subtle.
+
+PREVIEW RULES (VERY IMPORTANT)
+- Every View must have at least one `#Preview`.
+- Screens must include multiple previews:
+  - Empty state
+  - Populated state
+  - Dark mode
+  - Large Dynamic Type
+- Components must be previewed in isolation.
+- Use mock data from MockData/ only.
+- Previews must never rely on live services.
+
+VIEWMODEL RULES
+- Use MVVM.
+- ViewModels must be lightweight and UI-focused.
+- All business logic must be local and deterministic.
+- Scaling, totals, and derived values must be computed locally.
+- ViewModels must not know about networking or storage.
+
+DATA MODEL RULES
+- Models must be simple value types (`struct`).
+- Units must be canonical (grams, milliliters, count).
+- Display formatting must be handled in ViewModels or formatters.
+
+INTERACTION RULES
+- Sliders, buttons, and toggles must update UI immediately.
+- Loading states should be visually represented.
+- All user actions should be testable in previews.
+
+MOCKING RULES
+- Use `MockData` for:
+  - Meals
+  - Meal components
+  - Daily summaries
+  - User preferences
+- Mock data should be realistic and varied.
+
+WHAT NOT TO DO
+- Do not add networking code.
+- Do not add authentication.
+- Do not add database or CloudKit logic.
+- Do not over-engineer abstractions.
+- Do not reference future backend features.
+
+WHEN ASKED TO IMPLEMENT A SCREEN
+- Create the View
+- Create the ViewModel
+- Use mock data
+- Add multiple previews
+- Ensure it compiles and renders correctly
+
+WHEN ASKED TO REFACTOR
+- Preserve previews
+- Preserve behavior
+- Improve readability and reusability
+
+FINAL CHECK BEFORE RESPONDING
+- Does the code compile?
+- Are previews included?
+- Is the UI visually testable?
+- Is everything backend-free?
+
+If unsure, ask clarifying questions before writing code.
