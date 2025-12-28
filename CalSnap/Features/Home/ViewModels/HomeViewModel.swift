@@ -95,6 +95,60 @@ class HomeViewModel: ObservableObject {
         inputText = ""
     }
     
+    /// Duplicates an existing meal and adds it to today
+    func duplicateMeal(_ meal: Meal) {
+        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
+        
+        // Only allow adding meals to today
+        guard isToday else { return }
+        
+        // Create a new meal with a new ID and current timestamp
+        let duplicatedMeal = Meal(
+            id: UUID(), // Generate new ID
+            timestamp: Date(), // Set to current time
+            mealType: meal.mealType,
+            name: meal.name,
+            summary: meal.summary,
+            imageData: meal.imageData,
+            thumbnailData: meal.thumbnailData,
+            calories: meal.calories,
+            protein: meal.protein,
+            carbs: meal.carbs,
+            fat: meal.fat,
+            fiber: meal.fiber,
+            sugar: meal.sugar,
+            saturatedFat: meal.saturatedFat,
+            sodium: meal.sodium,
+            portionMultiplier: meal.portionMultiplier,
+            totalWeight: meal.totalWeight,
+            familiarUnit: meal.familiarUnit,
+            healthScore: meal.healthScore,
+            healthInsights: meal.healthInsights,
+            allergens: meal.allergens,
+            dietaryTags: meal.dietaryTags,
+            confidence: meal.confidence,
+            uncertaintyNotes: meal.uncertaintyNotes,
+            components: meal.components
+        )
+        
+        meals.append(duplicatedMeal)
+        meals.sort { $0.timestamp < $1.timestamp }
+        updateDailyProgress()
+    }
+    
+    /// Toggles the favorite status of a meal
+    func toggleFavorite(_ meal: Meal) {
+        if let index = meals.firstIndex(where: { $0.id == meal.id }) {
+            meals[index].isFavorite.toggle()
+        }
+    }
+    
+    /// Deletes a meal from the current day
+    func deleteMeal(_ meal: Meal) {
+        meals.removeAll { $0.id == meal.id }
+        updateDailyProgress()
+    }
+    
     /// Updates daily progress based on current meals
     private func updateDailyProgress() {
         dailyProgress = DailyProgress.from(

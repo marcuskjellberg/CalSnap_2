@@ -82,20 +82,34 @@ struct HomeView: View {
                                 .padding(.horizontal, AppTheme.Spacing.md)
                             
                             ForEach(viewModel.meals) { meal in
-                                Button {
-                                    navigationPath.append(AppDestination.mealDetail(meal))
-                                } label: {
-                                    MealCard(
-                                        title: meal.name,
-                                        calories: Int(meal.totalCalories),
-                                        protein: Int(meal.totalProtein),
-                                        carbs: Int(meal.totalCarbs),
-                                        fat: Int(meal.totalFat),
-                                        time: meal.timeString,
-                                        image: nil
-                                    )
+                                SwipeableCard(
+                                    actions: [
+                                        .add { 
+                                            viewModel.duplicateMeal(meal)
+                                        },
+                                        .favorite(isFavorite: meal.isFavorite) { 
+                                            viewModel.toggleFavorite(meal)
+                                        },
+                                        .delete { 
+                                            viewModel.deleteMeal(meal)
+                                        }
+                                    ]
+                                ) {
+                                    Button {
+                                        navigationPath.append(AppDestination.mealDetail(meal))
+                                    } label: {
+                                        MealCard(
+                                            title: meal.name,
+                                            calories: Int(meal.totalCalories),
+                                            protein: Int(meal.totalProtein),
+                                            carbs: Int(meal.totalCarbs),
+                                            fat: Int(meal.totalFat),
+                                            time: meal.timeString,
+                                            image: nil
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                                 .padding(.horizontal, AppTheme.Spacing.md)
                             }
                         }
@@ -302,20 +316,28 @@ struct HomeViewManyMeals: View {
                             .padding(.horizontal, AppTheme.Spacing.md)
                         
                         ForEach(viewModel.meals) { meal in
-                            Button {
-                                navigationPath.append(AppDestination.mealDetail(meal))
-                            } label: {
-                                MealCard(
-                                    title: meal.name,
-                                    calories: Int(meal.totalCalories),
-                                    protein: Int(meal.totalProtein),
-                                    carbs: Int(meal.totalCarbs),
-                                    fat: Int(meal.totalFat),
-                                    time: meal.timeString,
-                                    image: nil
-                                )
+                            SwipeableCard(
+                                actions: [
+                                    .add { viewModel.addDummyMeal() },
+                                    .edit { },
+                                    .delete { }
+                                ]
+                            ) {
+                                Button {
+                                    navigationPath.append(AppDestination.mealDetail(meal))
+                                } label: {
+                                    MealCard(
+                                        title: meal.name,
+                                        calories: Int(meal.totalCalories),
+                                        protein: Int(meal.totalProtein),
+                                        carbs: Int(meal.totalCarbs),
+                                        fat: Int(meal.totalFat),
+                                        time: meal.timeString,
+                                        image: nil
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                             .padding(.horizontal, AppTheme.Spacing.md)
                         }
                     }

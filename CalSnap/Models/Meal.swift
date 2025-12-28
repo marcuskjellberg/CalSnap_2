@@ -46,6 +46,9 @@ struct Meal: Identifiable, Codable, Equatable, Hashable {
     var confidence: ConfidenceLevel
     var uncertaintyNotes: [String]
     
+    // User Preferences
+    var isFavorite: Bool = false
+    
     // Components
     var components: [MealComponent]
     
@@ -124,6 +127,7 @@ struct Meal: Identifiable, Codable, Equatable, Hashable {
         dietaryTags: [DietaryTag] = [],
         confidence: ConfidenceLevel = .high,
         uncertaintyNotes: [String] = [],
+        isFavorite: Bool = false,
         components: [MealComponent] = []
     ) {
         self.id = id
@@ -150,6 +154,7 @@ struct Meal: Identifiable, Codable, Equatable, Hashable {
         self.dietaryTags = dietaryTags
         self.confidence = confidence
         self.uncertaintyNotes = uncertaintyNotes
+        self.isFavorite = isFavorite
         self.components = components
     }
 }
