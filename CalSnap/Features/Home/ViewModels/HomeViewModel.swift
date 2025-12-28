@@ -12,8 +12,6 @@ import Combine
 /// ViewModel for the Home screen
 @MainActor
 class HomeViewModel: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
-    
     // MARK: - Published Properties
     
     @Published var selectedDate: Date = Date() {

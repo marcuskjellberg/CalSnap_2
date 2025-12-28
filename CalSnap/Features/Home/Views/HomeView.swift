@@ -19,6 +19,32 @@ struct HomeView: View {
             // Main content
             ScrollView {
                 VStack(spacing: 0) {
+                    // Custom Navigation Header with Icon
+                    HStack(spacing: 10) {
+                        MacroIcon(iconName: "Calories", tint: AppTheme.Colors.calories, size: 32)
+                        
+                        Text("CalSnap")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                        
+                        Spacer()
+                        
+                        // Profile Button
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(AppTheme.Colors.textPrimary)
+                        }
+                        .accessibilityLabel("Profile")
+                        .accessibilityHint("View your profile and settings")
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.md)
+                    .padding(.bottom, AppTheme.Spacing.xs)
+                    .background(AppTheme.Colors.background)
+                    
                     // Week Calendar
                     WeekCalendarView(viewModel: calendarViewModel) { selectedDate in
                         // Update HomeViewModel when date is selected
@@ -37,7 +63,8 @@ struct HomeView: View {
                         carbsTarget: viewModel.dailyProgress.goals.carbsTarget,
                         fatConsumed: viewModel.dailyProgress.fatConsumed,
                         fatTarget: viewModel.dailyProgress.goals.fatTarget,
-                        mealCount: viewModel.mealCount
+                        mealCount: viewModel.mealCount,
+                        selectedDate: viewModel.selectedDate
                     )
                     .padding(.horizontal, AppTheme.Spacing.md)
                     .padding(.top, AppTheme.Spacing.md)
@@ -106,19 +133,7 @@ struct HomeView: View {
                 )
             }
         }
-        .navigationTitle("CalSnap")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 18))
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                }
-            }
-        }
+        .navigationBarHidden(true)
         .onAppear {
             // Sync initial selected date
             viewModel.selectDate(calendarViewModel.selectedDate)

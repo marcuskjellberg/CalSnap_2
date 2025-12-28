@@ -12,6 +12,7 @@ struct DailyTrackerCard: View {
     let fatConsumed: Double
     let fatTarget: Double
     let mealCount: Int
+    let selectedDate: Date
     
     init(
         caloriesConsumed: Int,
@@ -22,7 +23,8 @@ struct DailyTrackerCard: View {
         carbsTarget: Double,
         fatConsumed: Double,
         fatTarget: Double,
-        mealCount: Int = 2
+        mealCount: Int = 2,
+        selectedDate: Date = Date()
     ) {
         self.caloriesConsumed = caloriesConsumed
         self.calorieTarget = calorieTarget
@@ -33,6 +35,7 @@ struct DailyTrackerCard: View {
         self.fatConsumed = fatConsumed
         self.fatTarget = fatTarget
         self.mealCount = mealCount
+        self.selectedDate = selectedDate
     }
     
     var calorieProgress: Double {
@@ -40,12 +43,27 @@ struct DailyTrackerCard: View {
         return Double(caloriesConsumed) / Double(calorieTarget)
     }
     
+    /// Returns the appropriate date label (TODAY, YESTERDAY, or formatted date)
+    private var dateLabel: String {
+        let calendar = Calendar.current
+        if calendar.isDate(selectedDate, inSameDayAs: Date()) {
+            return "TODAY"
+        } else if calendar.isDateInYesterday(selectedDate) {
+            return "YESTERDAY"
+        } else {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "sv_SE")
+            formatter.dateFormat = "EEE, d MMM"
+            return formatter.string(from: selectedDate).uppercased()
+        }
+    }
+    
     var body: some View {
         CardContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 // Header
                 HStack {
-                    Text("TODAY")
+                    Text(dateLabel)
                         .font(AppTheme.Typography.captionLarge)
                         .fontWeight(.bold)
                         .foregroundColor(AppTheme.Colors.textSecondary)
@@ -58,7 +76,7 @@ struct DailyTrackerCard: View {
                         .foregroundColor(AppTheme.Colors.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Today, \(mealCount) meals logged")
+                .accessibilityLabel("\(dateLabel), \(mealCount) meals logged")
                 
                 // Calories Section
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
@@ -180,7 +198,7 @@ private struct MacroProgressRow: View {
 
 // MARK: - Previews
 
-#Preview("Standard") {
+#Preview("Today") {
     DailyTrackerCard(
         caloriesConsumed: 374,
         calorieTarget: 2304,
@@ -189,14 +207,16 @@ private struct MacroProgressRow: View {
         carbsConsumed: 31,
         carbsTarget: 272,
         fatConsumed: 22,
-        fatTarget: 61
+        fatTarget: 61,
+        selectedDate: Date()
     )
     .padding()
     .background(AppTheme.Colors.background)
 }
 
-#Preview("Near Target") {
-    DailyTrackerCard(
+#Preview("Yesterday") {
+    let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+    return DailyTrackerCard(
         caloriesConsumed: 2100,
         calorieTarget: 2304,
         proteinConsumed: 150,
@@ -205,7 +225,26 @@ private struct MacroProgressRow: View {
         carbsTarget: 272,
         fatConsumed: 55,
         fatTarget: 61,
-        mealCount: 5
+        mealCount: 5,
+        selectedDate: yesterday
+    )
+    .padding()
+    .background(AppTheme.Colors.background)
+}
+
+#Preview("Past Date") {
+    let pastDate = Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
+    return DailyTrackerCard(
+        caloriesConsumed: 1850,
+        calorieTarget: 2304,
+        proteinConsumed: 140,
+        proteinTarget: 167,
+        carbsConsumed: 200,
+        carbsTarget: 272,
+        fatConsumed: 50,
+        fatTarget: 61,
+        mealCount: 4,
+        selectedDate: pastDate
     )
     .padding()
     .background(AppTheme.Colors.background)
