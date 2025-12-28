@@ -33,7 +33,6 @@ struct SwipeableCard<Content: View>: View {
     // MARK: - Properties
     
     let actions: [SwipeAction]
-    let buttonWidth: CGFloat
     let cardHeight: CGFloat
     let enableFullSwipe: Bool
     let content: Content
@@ -55,7 +54,9 @@ struct SwipeableCard<Content: View>: View {
     // MARK: - Computed
     
     private var totalRevealWidth: CGFloat {
-        CGFloat(actions.count) * buttonWidth
+        guard !actions.isEmpty else { return 0 }
+        // Each button is 44pt + 8pt spacing (last button has no trailing spacing)
+        return CGFloat(actions.count) * 44 + CGFloat(actions.count - 1) * 8 + 16 // 16pt padding on each side
     }
     
     private var currentOffset: CGFloat {
@@ -77,19 +78,16 @@ struct SwipeableCard<Content: View>: View {
     /// Creates a swipeable card wrapper.
     /// - Parameters:
     ///   - actions: Array of swipe actions to reveal (max 3 recommended)
-    ///   - buttonWidth: Width of each action button (default: 70pt)
     ///   - cardHeight: Height of the card content (default: 100pt)
     ///   - enableFullSwipe: Whether full swipe triggers the last action (default: false)
     ///   - content: The card content to wrap
     init(
         actions: [SwipeAction],
-        buttonWidth: CGFloat = 70,
         cardHeight: CGFloat = 100,
         enableFullSwipe: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.actions = actions
-        self.buttonWidth = buttonWidth
         self.cardHeight = cardHeight
         self.enableFullSwipe = enableFullSwipe
         self.content = content()
@@ -149,8 +147,13 @@ struct SwipeableCard<Content: View>: View {
     // MARK: - Subviews
     
     private var actionButtonsRow: some View {
-        HStack(spacing: 0) {
-            ForEach(actions) { action in
+        HStack(spacing: 8) {
+            // Leading padding
+            Spacer()
+  
+                .frame(width: 8)
+            
+            ForEach(Array(actions.enumerated()), id: \.element.id) { index, action in
                 SwipeActionButton(
                     action: SwipeAction(
                         icon: action.icon,
@@ -160,12 +163,20 @@ struct SwipeableCard<Content: View>: View {
                             handleAction(action)
                         }
                     ),
-                    height: cardHeight,
-                    revealProgress: revealProgress
+                    cardHeight: cardHeight,
+                    cardOffset: abs(currentOffset), // Pass absolute offset
+                    buttonIndex: index,
+                    totalButtons: actions.count, // Pass total count for proper reversal
+                    buttonSize: 44,
+                    buttonSpacing: 8
                 )
             }
+            
+            // Trailing padding
+            //Spacer()
+              //  .frame(width: 8)
         }
-        .frame(width: totalRevealWidth)
+        .frame(width: totalRevealWidth, alignment: .trailing)
         .allowsHitTesting(isRevealed && !isDragging) // Only allow taps when revealed and not dragging
     }
     
@@ -684,8 +695,7 @@ struct SwipeableCard<Content: View>: View {
             actions: [
                 .add { },
                 .delete { }
-            ],
-            buttonWidth: 90
+            ]
         ) {
             MealCard(
                 title: "Wide Actions Demo",
