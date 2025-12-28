@@ -43,7 +43,7 @@ struct BottomPromptBar: View {
     // Approximate line height used to estimate TextEditor growth per line
     private let editorLineHeight: CGFloat = 21 // Approximate line height for 17pt system font
     // Maximum height the TextEditor (and pill) can grow to (caps at ~4 lines)
-    private var maxEditorHeight: CGFloat { editorLineHeight * 4 + 24 } // 4 lines + vertical padding
+    private var maxEditorHeight: CGFloat { editorLineHeight * 1 + 24 } // 1 lines + vertical padding
     
     var body: some View {
         VStack(spacing: 0) {
@@ -145,64 +145,60 @@ private struct SearchBarContent: View {
     private let buttonSize: CGFloat = 44
     
     var body: some View {
-        HStack(spacing: 0) {
-            CameraButton(
-                size: buttonSize,
-                iconSize: cameraIconSize,
-                onTap: {
-                    isTextFieldFocused.wrappedValue = false
-                    onCameraTap()
+        CardContainer(
+            padding: AppTheme.Spacing.md,
+            cornerRadius: 28,
+            showShadow: true,
+            style: .glass,
+            isActive: isRecording
+        ) {
+            
+            HStack(spacing: 0) {
+                CameraButton(
+                    size: buttonSize,
+                    iconSize: cameraIconSize,
+                    onTap: {
+                        isTextFieldFocused.wrappedValue = false
+                        onCameraTap()
+                    }
+                )
+                
+                Spacer().frame(width: AppTheme.Spacing.sm)
+                
+                TextEditorWithPlaceholder(
+                    text: $text,
+                    placeholder: placeholder,
+                    isFocused: isTextFieldFocused,
+                    height: $textEditorHeight,
+                    minHeight: minHeight,
+                    maxHeight: maxHeight
+                )
+                
+                Spacer().frame(width: AppTheme.Spacing.sm)
+                
+                if isRecording {
+                    StopRecordingButton(
+                        size: buttonSize,
+                        iconSize: iconSize,
+                        onTap: {
+                            isTextFieldFocused.wrappedValue = false
+                            onStopRecording()
+                        }
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                } else {
+                    MicrophoneButton(
+                        size: buttonSize,
+                        iconSize: iconSize,
+                        onTap: {
+                            isTextFieldFocused.wrappedValue = false
+                            onMicrophoneTap()
+                        }
+                    )
                 }
-            )
-            
-            Spacer().frame(width: AppTheme.Spacing.sm)
-            
-            TextEditorWithPlaceholder(
-                text: $text,
-                placeholder: placeholder,
-                isFocused: isTextFieldFocused,
-                height: $textEditorHeight,
-                minHeight: minHeight,
-                maxHeight: maxHeight
-            )
-            
-            Spacer().frame(width: AppTheme.Spacing.sm)
-            
-            if isRecording {
-                StopRecordingButton(
-                    size: buttonSize,
-                    iconSize: iconSize,
-                    onTap: {
-                        isTextFieldFocused.wrappedValue = false
-                        onStopRecording()
-                    }
-                )
-                .transition(.scale.combined(with: .opacity))
-            } else {
-                MicrophoneButton(
-                    size: buttonSize,
-                    iconSize: iconSize,
-                    onTap: {
-                        isTextFieldFocused.wrappedValue = false
-                        onMicrophoneTap()
-                    }
-                )
             }
+            //.frame(minHeight: minHeight, maxHeight: maxHeight)
         }
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .frame(minHeight: minHeight, maxHeight: maxHeight)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.thinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(
-                            isRecording ? AppTheme.Colors.accent : .white.opacity(0.2),
-                            lineWidth: isRecording ? 2 : 1
-                        )
-                )
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
-        )
         .animation(.easeInOut(duration: 0.2), value: isRecording)
     }
 }

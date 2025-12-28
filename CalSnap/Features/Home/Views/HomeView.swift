@@ -71,9 +71,11 @@ struct HomeView: View {
                     .padding(.horizontal, AppTheme.Spacing.md)
                     .padding(.top, AppTheme.Spacing.md)
                     
+                    Spacer(minLength: AppTheme.Spacing.md)
+                    
                     // Meals Section
                     if viewModel.hasMeals {
-                        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                             Text(mealsSectionTitle)
                                 .font(AppTheme.Typography.heading2)
                                 .foregroundColor(AppTheme.Colors.textPrimary)

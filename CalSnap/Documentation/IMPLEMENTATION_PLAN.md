@@ -9,7 +9,7 @@
 | 2 | Reusable UI components | ✅ Done |
 | 3 | Mock models & data |  ✅ Done |
 | 4 | Navigation shell | ✅ Done  |
-| 5 | Home screen | ⬜ |
+| 5 | Home screen | ✅ Done   |
 | 6 | Meal detail screen | ⬜ |
 | 7 | Settings | ⬜ |
 | 8 | Goal wizard | ⬜ |
