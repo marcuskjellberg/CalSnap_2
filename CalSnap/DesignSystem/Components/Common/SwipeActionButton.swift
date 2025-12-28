@@ -44,6 +44,7 @@ struct SwipeActionButton: View {
             .opacity(0.5 + (0.5 * revealProgress))
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle()) // Ensure entire button area is tappable
         .accessibilityLabel(accessibilityLabel)
     }
     
@@ -133,4 +134,6 @@ struct SwipeActionButton: View {
     .padding()
     .background(Color.gray.opacity(0.2))
 }
+
+
 

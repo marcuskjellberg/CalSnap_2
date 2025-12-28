@@ -115,6 +115,7 @@ struct SwipeableCard<Content: View>: View {
                 .contentShape(Rectangle())
                 .highPriorityGesture(actions.isEmpty ? nil : dragGesture)
                 .onTapGesture {
+                    // Dismiss actions when card is tapped and revealed
                     if isRevealed {
                         dismissActions()
                     }
@@ -122,6 +123,19 @@ struct SwipeableCard<Content: View>: View {
         }
         .frame(height: cardHeight)
         .clipped()
+        .background(
+            // Invisible background that catches taps when revealed
+            // Only active when card is revealed, allows tapping anywhere in the card's frame to dismiss
+            Group {
+                if isRevealed {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            dismissActions()
+                        }
+                }
+            }
+        )
         .onChange(of: isDragging) { _, newValue in
             if !newValue {
                 hasTriggeredRevealHaptic = false
@@ -489,6 +503,7 @@ struct SwipeableCard<Content: View>: View {
     .padding()
     .background(AppTheme.Colors.background)
 }
+
 #Preview("Edit and Favorite Actions") {
     VStack(spacing: AppTheme.Spacing.md) {
         Text("Edit + Favorite combination")
@@ -848,5 +863,6 @@ struct SwipeableCard<Content: View>: View {
     .padding()
     .background(AppTheme.Colors.background)
 }
+
 
 
