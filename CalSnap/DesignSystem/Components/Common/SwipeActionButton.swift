@@ -45,6 +45,7 @@ struct SwipeActionButton: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle()) // Ensure entire button area is tappable
+        .allowsHitTesting(true) // Explicitly allow hit testing
         .accessibilityLabel(accessibilityLabel)
     }
     

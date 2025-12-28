@@ -89,18 +89,18 @@ class HomeViewModel: ObservableObject {
             components: []
         )
         
-        meals.append(dummyMeal)
-        meals.sort { $0.timestamp < $1.timestamp }
-        updateDailyProgress()
+        // Add to mock data
+        MockData.addMeal(dummyMeal, for: selectedDate)
+        
+        // Reload meals to get updated list
+        loadMealsForSelectedDate()
         inputText = ""
     }
     
-    /// Duplicates an existing meal and adds it to today
+    /// Duplicates an existing meal and adds it to today (regardless of selected date)
     func duplicateMeal(_ meal: Meal) {
-        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
-        
-        // Only allow adding meals to today
-        guard isToday else { return }
+        // Always add to today's date, regardless of what date is currently selected
+        let today = calendar.startOfDay(for: Date())
         
         // Create a new meal with a new ID and current timestamp
         let duplicatedMeal = Meal(
@@ -131,9 +131,13 @@ class HomeViewModel: ObservableObject {
             components: meal.components
         )
         
-        meals.append(duplicatedMeal)
-        meals.sort { $0.timestamp < $1.timestamp }
-        updateDailyProgress()
+        // Add to mock data for today
+        MockData.addMeal(duplicatedMeal, for: today)
+        
+        // If viewing today, reload to show the new meal
+        if calendar.isDate(selectedDate, inSameDayAs: Date()) {
+            loadMealsForSelectedDate()
+        }
     }
     
     /// Toggles the favorite status of a meal
@@ -145,8 +149,11 @@ class HomeViewModel: ObservableObject {
     
     /// Deletes a meal from the current day
     func deleteMeal(_ meal: Meal) {
-        meals.removeAll { $0.id == meal.id }
-        updateDailyProgress()
+        // Remove from mock data
+        MockData.removeMeal(withId: meal.id)
+        
+        // Reload meals to get updated list
+        loadMealsForSelectedDate()
     }
     
     /// Updates daily progress based on current meals
@@ -163,8 +170,8 @@ class HomeViewModel: ObservableObject {
     func clearMeals() {
         let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
         if isToday {
-            meals = []
-            updateDailyProgress()
+            MockData.clearMeals(for: selectedDate)
+            loadMealsForSelectedDate()
         }
     }
     

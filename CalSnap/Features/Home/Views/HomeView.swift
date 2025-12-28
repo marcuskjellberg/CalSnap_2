@@ -85,12 +85,15 @@ struct HomeView: View {
                                 SwipeableCard(
                                     actions: [
                                         .add { 
+                                            print("Add action triggered for meal: \(meal.name)")
                                             viewModel.duplicateMeal(meal)
                                         },
                                         .favorite(isFavorite: meal.isFavorite) { 
+                                            print("Favorite action triggered for meal: \(meal.name)")
                                             viewModel.toggleFavorite(meal)
                                         },
                                         .delete { 
+                                            print("Delete action triggered for meal: \(meal.name)")
                                             viewModel.deleteMeal(meal)
                                         }
                                     ]

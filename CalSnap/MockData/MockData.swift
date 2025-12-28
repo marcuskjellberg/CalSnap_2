@@ -1,6 +1,7 @@
 import Foundation
 
 /// Cached meals by date dictionary (generated once for consistency)
+/// Made mutable so we can add/remove meals for testing
 private var _cachedMealsByDate: [Date: [Meal]]?
 
 /// Centralized mock data for UI development and previews
@@ -615,6 +616,73 @@ enum MockData {
         let calendar = Calendar.current
         let dayStart = calendar.startOfDay(for: date)
         return mealsByDate()[dayStart] ?? []
+    }
+    
+    // MARK: - Mutable Operations (for testing)
+    
+    /// Adds a meal to the mock data for a specific date
+    /// - Parameters:
+    ///   - meal: The meal to add
+    ///   - date: The date to add the meal to (normalized to start of day)
+    static func addMeal(_ meal: Meal, for date: Date) {
+        // Ensure cache is initialized
+        _ = mealsByDate()
+        
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: date)
+        
+        // Initialize cache if needed
+        if _cachedMealsByDate == nil {
+            _cachedMealsByDate = [:]
+        }
+        
+        // Get existing meals for this date
+        var dayMeals = _cachedMealsByDate?[dayStart] ?? []
+        
+        // Add the new meal
+        dayMeals.append(meal)
+        
+        // Sort by timestamp
+        dayMeals.sort { $0.timestamp < $1.timestamp }
+        
+        // Update cache
+        _cachedMealsByDate?[dayStart] = dayMeals
+    }
+    
+    /// Removes a meal from the mock data by ID
+    /// - Parameter mealId: The ID of the meal to remove
+    static func removeMeal(withId mealId: UUID) {
+        // Ensure cache is initialized
+        _ = mealsByDate()
+        
+        guard var cached = _cachedMealsByDate else { return }
+        
+        // Find and remove the meal from all dates
+        for (date, meals) in cached {
+            let filteredMeals = meals.filter { $0.id != mealId }
+            if filteredMeals.count != meals.count {
+                // Meal was found and removed
+                cached[date] = filteredMeals.isEmpty ? nil : filteredMeals
+                if filteredMeals.isEmpty {
+                    cached.removeValue(forKey: date)
+                }
+            }
+        }
+        
+        _cachedMealsByDate = cached
+    }
+    
+    /// Clears all meals for a specific date
+    /// - Parameter date: The date to clear (normalized to start of day)
+    static func clearMeals(for date: Date) {
+        // Ensure cache is initialized
+        _ = mealsByDate()
+        
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: date)
+        
+        _cachedMealsByDate?[dayStart] = nil
+        _cachedMealsByDate?.removeValue(forKey: dayStart)
     }
 }
 

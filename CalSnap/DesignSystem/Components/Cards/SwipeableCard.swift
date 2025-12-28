@@ -99,9 +99,10 @@ struct SwipeableCard<Content: View>: View {
     
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Action buttons (behind the card)
+            // Action buttons (behind the card, but tappable when revealed)
             if !actions.isEmpty {
                 actionButtonsRow
+                    .zIndex(10) // Highest zIndex so buttons are tappable when revealed
             }
             
             // Card content (on top, draggable)
@@ -114,28 +115,20 @@ struct SwipeableCard<Content: View>: View {
                 )
                 .contentShape(Rectangle())
                 .highPriorityGesture(actions.isEmpty ? nil : dragGesture)
+                .zIndex(isRevealed ? 1 : 5) // Lower zIndex when revealed so buttons can be tapped
+                .allowsHitTesting(true)
                 .onTapGesture {
                     // Dismiss actions when card is tapped and revealed
                     if isRevealed {
                         dismissActions()
                     }
                 }
+            
+            // Background tap area - only catches taps outside buttons and card
+            // We don't need this as the card's tap gesture handles dismiss
         }
         .frame(height: cardHeight)
         .clipped()
-        .background(
-            // Invisible background that catches taps when revealed
-            // Only active when card is revealed, allows tapping anywhere in the card's frame to dismiss
-            Group {
-                if isRevealed {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            dismissActions()
-                        }
-                }
-            }
-        )
         .onChange(of: isDragging) { _, newValue in
             if !newValue {
                 hasTriggeredRevealHaptic = false
@@ -173,6 +166,7 @@ struct SwipeableCard<Content: View>: View {
             }
         }
         .frame(width: totalRevealWidth)
+        .allowsHitTesting(isRevealed && !isDragging) // Only allow taps when revealed and not dragging
     }
     
     // MARK: - Gesture
@@ -272,9 +266,16 @@ struct SwipeableCard<Content: View>: View {
     // MARK: - Actions
     
     private func handleAction(_ action: SwipeAction) {
+        // Provide haptic feedback
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+        
+        // Execute the action
         action.action()
-        dismissActions()
+        
+        // Dismiss the swipe actions after a short delay to allow UI updates
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            dismissActions()
+        }
     }
     
     private func dismissActions() {
