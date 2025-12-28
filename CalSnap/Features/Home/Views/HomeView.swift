@@ -13,6 +13,8 @@ struct HomeView: View {
     
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var calendarViewModel = WeekCalendarViewModel()
+    @State private var showCamera = false
+    @State private var selectedImages: [UIImage] = []
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -119,21 +121,26 @@ struct HomeView: View {
             }
             .background(AppTheme.Colors.background)
             
-            // Bottom Input Bar (only show for today)
-            if Calendar.current.isDate(viewModel.selectedDate, inSameDayAs: Date()) {
-                BottomPromptBar(
-                    text: $viewModel.inputText,
-                    placeholder: "Add meal...",
-                    onCameraTap: { /* Camera action */ },
-                    onFavoritesTap: { /* Favorites action */ },
-                    onVoiceTap: { /* Voice action */ },
-                    onSendTap: {
-                        viewModel.addDummyMeal()
-                    }
-                )
-            }
+            // Bottom Input Bar (always visible)
+            BottomPromptBar(
+                text: $viewModel.inputText,
+                placeholder: "Ask anything",
+                selectedImages: $selectedImages,
+                onCameraTap: { 
+                    showCamera = true
+                },
+                onFavoritesTap: { /* Favorites action */ },
+                onSendTap: {
+                    viewModel.addDummyMeal()
+                }
+            )
         }
         .navigationBarHidden(true)
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView { images in
+                selectedImages = images
+            }
+        }
         .onAppear {
             // Sync initial selected date
             viewModel.selectDate(calendarViewModel.selectedDate)
@@ -233,10 +240,10 @@ struct HomeViewEmpty: View {
             
             BottomPromptBar(
                 text: .constant(""),
-                placeholder: "Add meal...",
+                placeholder: "Ask anything",
+                selectedImages: .constant([]),
                 onCameraTap: {},
                 onFavoritesTap: {},
-                onVoiceTap: {},
                 onSendTap: {}
             )
         }
@@ -310,10 +317,10 @@ struct HomeViewManyMeals: View {
             
             BottomPromptBar(
                 text: $viewModel.inputText,
-                placeholder: "Add meal...",
+                placeholder: "Ask anything",
+                selectedImages: .constant([]),
                 onCameraTap: {},
                 onFavoritesTap: {},
-                onVoiceTap: {},
                 onSendTap: { viewModel.addDummyMeal() }
             )
         }
@@ -371,3 +378,4 @@ struct HomeViewManyMeals: View {
     }
     .environment(\.dynamicTypeSize, .accessibility2)
 }
+

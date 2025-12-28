@@ -8,6 +8,8 @@
 import SwiftUI
 import PhotosUI
 import AVFoundation
+import Speech
+import Combine
 
 struct CameraPickerView: View {
     @Environment(\.dismiss) private var dismiss
@@ -21,7 +23,7 @@ struct CameraPickerView: View {
             CameraPreviewView(session: viewModel.captureSession)
                 .ignoresSafeArea()
             
-            VStack {
+            VStack(spacing: 0) {
                 // Top Bar with Action Buttons
                 HStack(spacing: 12) {
                     // Close Button
@@ -29,16 +31,16 @@ struct CameraPickerView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 44, height: 44)
-                            .background(Color.black.opacity(0.5))
-                            .clipShape(Circle())
+                            .background(.ultraThinMaterial, in: Circle())
+                            .environment(\.colorScheme, .dark)
                     }
                     
                     Spacer()
                     
-                    // Add Button (green)
+                    // Action Buttons - Only show when images are selected
                     if !viewModel.selectedImages.isEmpty {
                         Button {
                             onImagesSelected(viewModel.selectedImages)
@@ -46,31 +48,14 @@ struct CameraPickerView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("Add")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text("Done")
                                     .font(.system(size: 17, weight: .semibold))
                             }
                             .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.green)
-                            .cornerRadius(22)
-                        }
-                    }
-                    
-                    // Analyze Button (white)
-                    if !viewModel.selectedImages.isEmpty {
-                        Button {
-                            // Analyze action
-                            viewModel.analyzeImages()
-                        } label: {
-                            Text("Analyze")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.white)
-                                .cornerRadius(22)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.green, in: Capsule())
                         }
                     }
                 }
@@ -79,33 +64,34 @@ struct CameraPickerView: View {
                 
                 Spacer()
                 
-                // Thumbnail Strip
-                if !viewModel.selectedImages.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(Array(viewModel.selectedImages.enumerated()), id: \.offset) { index, image in
-                                ThumbnailView(image: image) {
-                                    viewModel.removeImage(at: index)
-                                }
+                // Photo Buckets - Always show 3 slots centered
+                HStack(spacing: 16) {
+                    ForEach(0..<3, id: \.self) { index in
+                        PhotoBucketView(
+                            image: index < viewModel.selectedImages.count ? viewModel.selectedImages[index] : nil,
+                            index: index
+                        ) {
+                            if index < viewModel.selectedImages.count {
+                                viewModel.removeImage(at: index)
                             }
                         }
-                        .padding(.horizontal, 20)
                     }
-                    .frame(height: 100)
                 }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 24)
                 
                 // Bottom Controls
-                HStack(spacing: 40) {
+                HStack(spacing: 60) {
                     // Photo Library Button
                     Button {
                         viewModel.showPhotoLibrary = true
                     } label: {
                         Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 28))
+                            .font(.system(size: 26))
                             .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Color.black.opacity(0.3))
-                            .clipShape(Circle())
+                            .frame(width: 50, height: 50)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .environment(\.colorScheme, .dark)
                     }
                     
                     // Capture Button
@@ -114,36 +100,37 @@ struct CameraPickerView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .stroke(Color.white, lineWidth: 4)
-                                .frame(width: 80, height: 80)
+                                .strokeBorder(Color.white, lineWidth: 4)
+                                .frame(width: 75, height: 75)
                             
                             Circle()
                                 .fill(Color.white)
-                                .frame(width: 68, height: 68)
+                                .frame(width: 63, height: 63)
                         }
                     }
                     .disabled(viewModel.selectedImages.count >= 3)
                     .opacity(viewModel.selectedImages.count >= 3 ? 0.5 : 1.0)
                     
-                    // Camera Flip Button
+                    // Flip Camera Button
                     Button {
                         viewModel.flipCamera()
                     } label: {
-                        Image(systemName: "camera.rotate")
-                            .font(.system(size: 28))
+                        Image(systemName: "arrow.triangle.2.circlepath.camera")
+                            .font(.system(size: 24))
                             .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Color.black.opacity(0.3))
-                            .clipShape(Circle())
+                            .frame(width: 50, height: 50)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .environment(\.colorScheme, .dark)
                     }
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, 24)
                 
                 // Instruction Text
-                Text("TAP TO CAPTURE")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(.bottom, 20)
+                Text(viewModel.selectedImages.isEmpty ? "TAP TO CAPTURE" : "TAP DONE TO CONTINUE")
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(1.2)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.bottom, 40)
             }
         }
         .photosPicker(
@@ -164,35 +151,55 @@ struct CameraPickerView: View {
     }
 }
 
-// MARK: - Thumbnail View
+// MARK: - Photo Bucket View
 
-struct ThumbnailView: View {
-    let image: UIImage
+struct PhotoBucketView: View {
+    let image: UIImage?
+    let index: Int
     let onDelete: () -> Void
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white, lineWidth: 3)
-                )
-            
-            // Delete Button
-            Button(action: onDelete) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 24, height: 24)
-                    .background(Color.black.opacity(0.7))
-                    .clipShape(Circle())
+        ZStack {
+            if let image = image {
+                // Filled bucket with image
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 90, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.white, lineWidth: 3)
+                        )
+                    
+                    // Delete Button
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                            .background(Circle().fill(Color.black.opacity(0.6)).padding(4))
+                    }
+                    .offset(x: 8, y: -8)
+                }
+            } else {
+                // Empty bucket placeholder
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.1))
+                    .frame(width: 90, height: 90)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                            .foregroundColor(.white.opacity(0.4))
+                    )
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white.opacity(0.4))
+                    )
             }
-            .offset(x: 8, y: -8)
         }
+        .frame(width: 90, height: 90)
     }
 }
 
@@ -234,14 +241,27 @@ struct CameraPreviewView: UIViewRepresentable {
 // MARK: - View Model
 
 @MainActor
-class CameraPickerViewModel: NSObject, ObservableObject {
+final class CameraPickerViewModel: NSObject, ObservableObject {
+    
+    // MARK: - Published Properties
+    
     @Published var selectedImages: [UIImage] = []
     @Published var showPhotoLibrary = false
     @Published var photoPickerItems: [PhotosPickerItem] = []
     
+    // MARK: - Camera Properties
+    
     let captureSession = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
     private var currentCamera: AVCaptureDevice.Position = .back
+    
+    // MARK: - Initialization
+    
+    override init() {
+        super.init()
+    }
+    
+    // MARK: - Camera Setup
     
     func setupCamera() {
         Task {
@@ -252,14 +272,16 @@ class CameraPickerViewModel: NSObject, ObservableObject {
     }
     
     func startCamera() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession.startRunning()
+        Task.detached { [weak self] in
+            guard let self else { return }
+            await self.captureSession.startRunning()
         }
     }
     
     func stopCamera() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession.stopRunning()
+        Task.detached { [weak self] in
+            guard let self else { return }
+            await self.captureSession.stopRunning()
         }
     }
     
@@ -274,6 +296,9 @@ class CameraPickerViewModel: NSObject, ObservableObject {
     private func configureCaptureSession() async {
         captureSession.beginConfiguration()
         captureSession.sessionPreset = .photo
+        
+        // Configure to not use audio (allows separate audio usage)
+        captureSession.automaticallyConfiguresApplicationAudioSession = false
         
         // Add camera input
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: currentCamera),
@@ -294,6 +319,8 @@ class CameraPickerViewModel: NSObject, ObservableObject {
         
         captureSession.commitConfiguration()
     }
+    
+    // MARK: - Photo Capture
     
     func capturePhoto() {
         guard selectedImages.count < 3 else { return }
@@ -318,6 +345,8 @@ class CameraPickerViewModel: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Image Management
+    
     func removeImage(at index: Int) {
         guard index < selectedImages.count else { return }
         selectedImages.remove(at: index)
@@ -341,11 +370,6 @@ class CameraPickerViewModel: NSObject, ObservableObject {
                 photoPickerItems = []
             }
         }
-    }
-    
-    func analyzeImages() {
-        // TODO: Implement image analysis with AI
-        print("Analyzing \(selectedImages.count) images...")
     }
 }
 

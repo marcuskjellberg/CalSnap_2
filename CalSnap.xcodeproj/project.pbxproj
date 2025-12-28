@@ -10,9 +10,22 @@
 		CC5983E92F006756002CCB04 /* CalSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CalSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CCC85AAA2F0170C000502DB4 /* Exceptions for "CalSnap" folder in "CalSnap" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CC5983E82F006756002CCB04 /* CalSnap */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CC5983EB2F006756002CCB04 /* CalSnap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CCC85AAA2F0170C000502DB4 /* Exceptions for "CalSnap" folder in "CalSnap" target */,
+			);
 			path = CalSnap;
 			sourceTree = "<group>";
 		};
@@ -256,6 +269,11 @@
 				DEVELOPMENT_TEAM = WR7CMSW6A6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CalSnap/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "CalSnap needs access to your camera to capture photos of your meals for nutritional analysis";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CalSnap needs access to your microphone to record voice descriptions of your meals";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CalSnap uses speech recognition to create events from voice input";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +306,11 @@
 				DEVELOPMENT_TEAM = WR7CMSW6A6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CalSnap/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "CalSnap needs access to your camera to capture photos of your meals for nutritional analysis";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CalSnap needs access to your microphone to record voice descriptions of your meals";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CalSnap uses speech recognition to create events from voice input";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
