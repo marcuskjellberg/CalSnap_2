@@ -6,13 +6,12 @@ struct MacroPill: View {
     let label: String
     let value: String
     let color: Color
-    var icon: String?
+    var iconName: String?
     
     var body: some View {
         HStack(spacing: AppTheme.Spacing.xxs) {
-            if let icon = icon {
-                Text(icon)
-                    .font(.system(size: 14))
+            if let iconName = iconName {
+                MacroIcon(iconName: iconName, tint: color, size: AppTheme.IconSize.xs)
                     .accessibilityHidden(true)
             }
             
@@ -42,7 +41,7 @@ struct MacroRow: View {
     let current: Double
     let target: Double
     let color: Color
-    let icon: String
+    let iconName: String
     
     var progress: Double {
         guard target > 0 else { return 0 }
@@ -52,7 +51,7 @@ struct MacroRow: View {
     var body: some View {
         VStack(spacing: AppTheme.Spacing.xxs) {
             HStack {
-                Text(icon)
+                MacroIcon(iconName: iconName, tint: color, size: AppTheme.IconSize.sm)
                     .accessibilityHidden(true)
                 Text(label)
                     .font(AppTheme.Typography.captionLarge)
@@ -87,9 +86,9 @@ struct MacroRow: View {
 
 #Preview("Macro Pills") {
     HStack {
-        MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, icon: "💪")
-        MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, icon: "🥦")
-        MacroPill(label: "F", value: "12g", color: AppTheme.Colors.fat, icon: "💧")
+        MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, iconName: "Protein")
+        MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, iconName: "Carbs")
+        MacroPill(label: "F", value: "12g", color: AppTheme.Colors.fat, iconName: "Fat")
     }
     .padding()
     .background(AppTheme.Colors.background)
@@ -97,9 +96,9 @@ struct MacroRow: View {
 
 #Preview("Macro Rows") {
     VStack(spacing: AppTheme.Spacing.md) {
-        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, icon: "💪")
-        MacroRow(label: "CARBS", current: 120, target: 272, color: AppTheme.Colors.carbs, icon: "🥦")
-        MacroRow(label: "FAT", current: 45, target: 61, color: AppTheme.Colors.fat, icon: "💧")
+        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, iconName: "Protein")
+        MacroRow(label: "CARBS", current: 120, target: 272, color: AppTheme.Colors.carbs, iconName: "Carbs")
+        MacroRow(label: "FAT", current: 45, target: 61, color: AppTheme.Colors.fat, iconName: "Fat")
     }
     .padding()
     .background(AppTheme.Colors.background)
@@ -108,10 +107,10 @@ struct MacroRow: View {
 #Preview("Dark Mode") {
     VStack(spacing: AppTheme.Spacing.md) {
         HStack {
-            MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, icon: "💪")
-            MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, icon: "🥦")
+            MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, iconName: "Protein")
+            MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, iconName: "Carbs")
         }
-        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, icon: "💪")
+        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, iconName: "Protein")
     }
     .padding()
     .background(AppTheme.Colors.background)
@@ -121,10 +120,10 @@ struct MacroRow: View {
 #Preview("Large Dynamic Type") {
     VStack(spacing: AppTheme.Spacing.md) {
         HStack {
-            MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, icon: "💪")
-            MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, icon: "🥦")
+            MacroPill(label: "P", value: "24g", color: AppTheme.Colors.protein, iconName: "Protein")
+            MacroPill(label: "C", value: "45g", color: AppTheme.Colors.carbs, iconName: "Carbs")
         }
-        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, icon: "💪")
+        MacroRow(label: "PROTEIN", current: 85, target: 167, color: AppTheme.Colors.protein, iconName: "Protein")
     }
     .padding()
     .background(AppTheme.Colors.background)

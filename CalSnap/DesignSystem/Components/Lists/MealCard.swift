@@ -149,12 +149,9 @@ private struct MacroIconValue: View {
     @ViewBuilder
     private func row(icon: CGFloat, font: Font) -> some View {
         HStack(spacing: 2) {
-            Image(iconName)
-                .resizable()
-                .renderingMode(.template)
-                .foregroundColor(tint)
-                .scaledToFit()
-                .frame(width: icon, height: icon)
+        
+            
+            MacroIcon(iconName: iconName, tint: tint, size: icon)
             
             Text("\(value)")
                 .foregroundColor(tint)

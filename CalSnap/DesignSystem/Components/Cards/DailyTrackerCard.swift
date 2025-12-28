@@ -73,18 +73,23 @@ struct DailyTrackerCard: View {
                             .font(AppTheme.Typography.numberMedium)
                             .foregroundColor(AppTheme.Colors.calories)
                     }
-                    
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text("\(caloriesConsumed)")
-                            .font(AppTheme.Typography.numberLarge)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                        
-                        Text("/ \(calorieTarget) kcal")
-                            .font(AppTheme.Typography.bodyMedium)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    HStack(alignment: .center) {
+                        MacroIcon(iconName: "Calories", tint: AppTheme.Colors.calories, size: AppTheme.IconSize.xl)
+                        HStack(alignment: .lastTextBaseline, spacing: 4) {
+                            
+                            
+                            
+                            Text("\(caloriesConsumed)")
+                                .font(AppTheme.Typography.numberLarge)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
+                            
+                            Text("/ \(calorieTarget) kcal")
+                                .font(AppTheme.Typography.bodyMedium)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(caloriesConsumed) of \(calorieTarget) calories")
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(caloriesConsumed) of \(calorieTarget) calories")
                     
                     // Calorie Progress Bar
                     ProgressBar(
@@ -100,14 +105,16 @@ struct DailyTrackerCard: View {
                 
                 // Macros Section
                 VStack(spacing: AppTheme.Spacing.md) {
-                    MacroRow(label: "PROTEIN", current: proteinConsumed, target: proteinTarget, color: AppTheme.Colors.protein, icon: "💪")
-                    MacroRow(label: "CARBS", current: carbsConsumed, target: carbsTarget, color: AppTheme.Colors.carbs, icon: "🥦")
-                    MacroRow(label: "FAT", current: fatConsumed, target: fatTarget, color: AppTheme.Colors.fat, icon: "💧")
+                    MacroProgressRow(label: "PROTEIN", current: proteinConsumed, target: proteinTarget, color: AppTheme.Colors.protein, iconName: "Protein")
+                    MacroProgressRow(label: "CARBS", current: carbsConsumed, target: carbsTarget, color: AppTheme.Colors.carbs, iconName: "Carbs")
+                    MacroProgressRow(label: "FAT", current: fatConsumed, target: fatTarget, color: AppTheme.Colors.fat, iconName: "Fat")
                 }
             }
         }
     }
 }
+
+
 
 /// Reusable progress bar component.
 private struct ProgressBar: View {
@@ -131,6 +138,43 @@ private struct ProgressBar: View {
         .frame(height: height)
         .accessibilityElement()
         .accessibilityValue("\(Int(progress * 100)) percent")
+    }
+}
+
+/// Macro row showing icon, label, current and target value with progress bar.
+private struct MacroProgressRow: View {
+    let label: String
+    let current: Double
+    let target: Double
+    let color: Color
+    let iconName: String
+    
+    private var progress: Double {
+        guard target > 0 else { return 0 }
+        return min(current / target, 1.0)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
+                MacroIcon(iconName: iconName, tint: color, size: AppTheme.IconSize.sm)
+                
+                Text(label)
+                    .font(AppTheme.Typography.bodyMedium)
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Text("\(Int(current))/\(Int(target)) g")
+                    .font(AppTheme.Typography.bodyMedium)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+            
+            ProgressBar(progress: progress, color: color)
+                .frame(height: 8)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(Int(current)) grams of \(Int(target)) grams")
     }
 }
 
@@ -199,3 +243,4 @@ private struct ProgressBar: View {
     .background(AppTheme.Colors.background)
     .environment(\.dynamicTypeSize, .accessibility2)
 }
+

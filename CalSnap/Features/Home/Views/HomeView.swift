@@ -11,68 +11,95 @@ struct HomeView: View {
     @Binding var navigationPath: NavigationPath
     @Binding var showSettings: Bool
     
-    @State private var inputText = ""
-    
-    // Mock data for UI development
-    private let dailyProgress = MockData.sampleDailyProgress
-    private let meals = MockData.sampleMeals
+    @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var calendarViewModel = WeekCalendarViewModel()
     
     var body: some View {
         ZStack(alignment: .bottom) {
             // Main content
             ScrollView {
-                VStack(spacing: AppTheme.Spacing.lg) {
+                VStack(spacing: 0) {
+                    // Week Calendar
+                    WeekCalendarView(viewModel: calendarViewModel) { selectedDate in
+                        // Handle date selection - for now just update viewModel if needed
+                        // In the future, this will load meals for the selected date
+                    }
+                    .padding(.top, AppTheme.Spacing.xs)
+                    
                     // Daily Tracker Card
                     DailyTrackerCard(
-                        caloriesConsumed: Int(dailyProgress.caloriesConsumed),
-                        calorieTarget: Int(dailyProgress.goals.calorieTarget),
-                        proteinConsumed: dailyProgress.proteinConsumed,
-                        proteinTarget: dailyProgress.goals.proteinTarget,
-                        carbsConsumed: dailyProgress.carbsConsumed,
-                        carbsTarget: dailyProgress.goals.carbsTarget,
-                        fatConsumed: dailyProgress.fatConsumed,
-                        fatTarget: dailyProgress.goals.fatTarget
+                        caloriesConsumed: Int(viewModel.dailyProgress.caloriesConsumed),
+                        calorieTarget: Int(viewModel.dailyProgress.goals.calorieTarget),
+                        proteinConsumed: viewModel.dailyProgress.proteinConsumed,
+                        proteinTarget: viewModel.dailyProgress.goals.proteinTarget,
+                        carbsConsumed: viewModel.dailyProgress.carbsConsumed,
+                        carbsTarget: viewModel.dailyProgress.goals.carbsTarget,
+                        fatConsumed: viewModel.dailyProgress.fatConsumed,
+                        fatTarget: viewModel.dailyProgress.goals.fatTarget
                     )
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.md)
                     
                     // Meals Section
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                        Text("Today's Meals")
-                            .font(AppTheme.Typography.heading2)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .padding(.horizontal, AppTheme.Spacing.md)
-                        
-                        ForEach(meals) { meal in
-                            Button {
-                                navigationPath.append(AppDestination.mealDetail(meal))
-                            } label: {
-                                MealCard(
-                                    title: meal.name,
-                                    calories: Int(meal.totalCalories),
-                                    protein: Int(meal.totalProtein),
-                                    carbs: Int(meal.totalCarbs),
-                                    fat: Int(meal.totalFat),
-                                    time: meal.timeString,
-                                    image: nil
-                                )
+                    if viewModel.hasMeals {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                            Text("Today's Meals")
+                                .font(AppTheme.Typography.heading2)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
+                                .padding(.horizontal, AppTheme.Spacing.md)
+                            
+                            ForEach(viewModel.meals) { meal in
+                                Button {
+                                    navigationPath.append(AppDestination.mealDetail(meal))
+                                } label: {
+                                    MealCard(
+                                        title: meal.name,
+                                        calories: Int(meal.totalCalories),
+                                        protein: Int(meal.totalProtein),
+                                        carbs: Int(meal.totalCarbs),
+                                        fat: Int(meal.totalFat),
+                                        time: meal.timeString,
+                                        image: nil
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal, AppTheme.Spacing.md)
                             }
-                            .buttonStyle(.plain)
                         }
+                    } else {
+                        // Empty state
+                        VStack(spacing: AppTheme.Spacing.md) {
+                            Image(systemName: "fork.knife")
+                                .font(.system(size: 48))
+                                .foregroundColor(AppTheme.Colors.textTertiary)
+                            
+                            Text("No meals logged today")
+                                .font(AppTheme.Typography.heading3)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                            
+                            Text("Add your first meal using the input below")
+                                .font(AppTheme.Typography.bodyMedium)
+                                .foregroundColor(AppTheme.Colors.textTertiary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppTheme.Spacing.xl)
                     }
                 }
-                .padding(.horizontal, AppTheme.Spacing.md)
-                .padding(.top, AppTheme.Spacing.md)
                 .padding(.bottom, 100) // Space for bottom bar
             }
             .background(AppTheme.Colors.background)
             
             // Bottom Input Bar
             BottomPromptBar(
-                text: $inputText,
+                text: $viewModel.inputText,
                 placeholder: "Add meal...",
                 onCameraTap: { /* Camera action */ },
                 onFavoritesTap: { /* Favorites action */ },
                 onVoiceTap: { /* Voice action */ },
-                onSendTap: { /* Send action */ }
+                onSendTap: {
+                    viewModel.addDummyMeal()
+                }
             )
         }
         .navigationTitle("CalSnap")
@@ -102,6 +129,171 @@ struct HomeView: View {
     }
 }
 
+// For preview purposes, we'll create separate preview variants
+struct HomeViewEmpty: View {
+    @StateObject private var viewModel = HomeViewModel()
+    @Binding var navigationPath: NavigationPath
+    @Binding var showSettings: Bool
+    
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: AppTheme.Spacing.lg) {
+                    DailyTrackerCard(
+                        caloriesConsumed: Int(viewModel.dailyProgress.caloriesConsumed),
+                        calorieTarget: Int(viewModel.dailyProgress.goals.calorieTarget),
+                        proteinConsumed: viewModel.dailyProgress.proteinConsumed,
+                        proteinTarget: viewModel.dailyProgress.goals.proteinTarget,
+                        carbsConsumed: viewModel.dailyProgress.carbsConsumed,
+                        carbsTarget: viewModel.dailyProgress.goals.carbsTarget,
+                        fatConsumed: viewModel.dailyProgress.fatConsumed,
+                        fatTarget: viewModel.dailyProgress.goals.fatTarget
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.md)
+                    
+                    VStack(spacing: AppTheme.Spacing.md) {
+                        Image(systemName: "fork.knife")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppTheme.Colors.textTertiary)
+                        
+                        Text("No meals logged today")
+                            .font(AppTheme.Typography.heading3)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        Text("Add your first meal using the input below")
+                            .font(AppTheme.Typography.bodyMedium)
+                            .foregroundColor(AppTheme.Colors.textTertiary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppTheme.Spacing.xl)
+                }
+                .padding(.bottom, 100)
+            }
+            .background(AppTheme.Colors.background)
+            
+            BottomPromptBar(
+                text: .constant(""),
+                placeholder: "Add meal...",
+                onCameraTap: {},
+                onFavoritesTap: {},
+                onVoiceTap: {},
+                onSendTap: {}
+            )
+        }
+        .navigationTitle("CalSnap")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.clearMeals()
+        }
+    }
+}
+
+struct HomeViewManyMeals: View {
+    @StateObject private var viewModel = HomeViewModel()
+    @Binding var navigationPath: NavigationPath
+    @Binding var showSettings: Bool
+    
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: AppTheme.Spacing.lg) {
+                    DailyTrackerCard(
+                        caloriesConsumed: Int(viewModel.dailyProgress.caloriesConsumed),
+                        calorieTarget: Int(viewModel.dailyProgress.goals.calorieTarget),
+                        proteinConsumed: viewModel.dailyProgress.proteinConsumed,
+                        proteinTarget: viewModel.dailyProgress.goals.proteinTarget,
+                        carbsConsumed: viewModel.dailyProgress.carbsConsumed,
+                        carbsTarget: viewModel.dailyProgress.goals.carbsTarget,
+                        fatConsumed: viewModel.dailyProgress.fatConsumed,
+                        fatTarget: viewModel.dailyProgress.goals.fatTarget
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, AppTheme.Spacing.md)
+                    
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        Text("Today's Meals")
+                            .font(AppTheme.Typography.heading2)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                            .padding(.horizontal, AppTheme.Spacing.md)
+                        
+                        ForEach(viewModel.meals) { meal in
+                            Button {
+                                navigationPath.append(AppDestination.mealDetail(meal))
+                            } label: {
+                                MealCard(
+                                    title: meal.name,
+                                    calories: Int(meal.totalCalories),
+                                    protein: Int(meal.totalProtein),
+                                    carbs: Int(meal.totalCarbs),
+                                    fat: Int(meal.totalFat),
+                                    time: meal.timeString,
+                                    image: nil
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, AppTheme.Spacing.md)
+                        }
+                    }
+                }
+                .padding(.bottom, 100)
+            }
+            .background(AppTheme.Colors.background)
+            
+            BottomPromptBar(
+                text: $viewModel.inputText,
+                placeholder: "Add meal...",
+                onCameraTap: {},
+                onFavoritesTap: {},
+                onVoiceTap: {},
+                onSendTap: { viewModel.addDummyMeal() }
+            )
+        }
+        .navigationTitle("CalSnap")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.setManyMeals()
+        }
+    }
+}
+
+#Preview("Home - Empty Day") {
+    NavigationStack {
+        HomeViewEmpty(
+            navigationPath: .constant(NavigationPath()),
+            showSettings: .constant(false)
+        )
+    }
+}
+
+#Preview("Home - Many Meals (Scroll)") {
+    NavigationStack {
+        HomeViewManyMeals(
+            navigationPath: .constant(NavigationPath()),
+            showSettings: .constant(false)
+        )
+    }
+}
+
 #Preview("Home - Dark Mode") {
     NavigationStack {
         HomeView(
@@ -119,5 +311,5 @@ struct HomeView: View {
             showSettings: .constant(false)
         )
     }
-    .environment(\.dynamicTypeSize, .accessibility1)
+    .environment(\.dynamicTypeSize, .accessibility2)
 }

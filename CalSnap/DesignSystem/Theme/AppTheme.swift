@@ -97,4 +97,15 @@ enum AppTheme {
         static let xl = CalSnap.CornerRadius.xl
         static let full = CalSnap.CornerRadius.full
     }
+    
+    // MARK: - Icon Sizes
+    
+    enum IconSize {
+        static let xs = CalSnap.IconSize.xs
+        static let sm = CalSnap.IconSize.sm
+        static let md = CalSnap.IconSize.md
+        static let lg = CalSnap.IconSize.lg
+        static let xl = CalSnap.IconSize.xl
+        static let xxl = CalSnap.IconSize.xxl
+    }
 }
