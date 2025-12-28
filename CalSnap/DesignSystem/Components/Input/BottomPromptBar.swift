@@ -1,13 +1,20 @@
 import SwiftUI
 import Speech
 import AVFoundation
-import Combine
 import UIKit
+import Combine
 
-
+// MARK: - Bottom Prompt Bar
 
 /// Persistent bottom input bar for logging meals via text, photo, or voice.
-/// Uses Asset-based colors for automatic Light/Dark mode support.
+/// 
+/// Handles three input methods:
+/// - Text input via TextEditor (single line default, expands to 4 lines max)
+/// - Voice transcription via speech recognition
+/// - Photo capture (images displayed above bar)
+///
+/// Uses AppTheme for all styling to ensure consistent design system compliance.
+/// Focus is dismissed when tapping outside the editor.
 struct BottomPromptBar: View {
     @Binding var text: String
     var placeholder: String = "Add a meal"
@@ -17,25 +24,25 @@ struct BottomPromptBar: View {
     var onFavoritesTap: () -> Void
     var onSendTap: () -> Void
     
-    @StateObject private var voiceRecorder = VoiceRecorderViewModel()
+    // Tracks whether the TextEditor inside the pill is focused (used to show/hide placeholder and dismiss keyboard)
     @FocusState private var isTextFieldFocused: Bool
-    @State private var textEditorHeight: CGFloat = 56
+    // Current measured height of the TextEditor content (drives dynamic resizing of the pill)
+    @State private var textEditorHeight: CGFloat = 40
+    @StateObject private var voiceRecorder = VoiceRecorderViewModel()
     
-    // Exact color specifications
-    private let microphoneActive = Color(red: 1.0, green: 0.23, blue: 0.19) // #FF3B30
-    private let microphoneInactive = Color(red: 0.56, green: 0.56, blue: 0.58) // #8E8E93
-    private let expandedPillBackground = Color(red: 0.95, green: 0.95, blue: 0.97) // #F2F2F7
+    // MARK: - Layout Constants
     
-    // Layout constants
-    private let searchBarHeight: CGFloat = 56
-    private let searchBarCornerRadius: CGFloat = 28
-    private let pillHeight: CGFloat = 36
-    private let pillTopOffset: CGFloat = -8
+    // Minimum height for the entire pill (camera + editor + mic) when showing a single line
+    private let searchBarMinHeight: CGFloat = 40 // Single line height (21pt text + 19pt padding)
+    // Size for standard icons (e.g., microphone glyph)
+    private let iconSize: CGFloat = 24
+    // Slightly larger size used for the camera icon to improve visual balance
     private let cameraIconSize: CGFloat = 28
-    private let stopButtonSize: CGFloat = 40
-    private let microphoneIconSize: CGFloat = 24
-    private let uploadButtonSize: CGFloat = 44
-    private let editorLineHeight: CGFloat = 21 // approximate line height for 17pt system font
+    // Tap target size for the circular buttons to meet accessibility guidelines
+    private let buttonSize: CGFloat = 44
+    // Approximate line height used to estimate TextEditor growth per line
+    private let editorLineHeight: CGFloat = 21 // Approximate line height for 17pt system font
+    // Maximum height the TextEditor (and pill) can grow to (caps at ~4 lines)
     private var maxEditorHeight: CGFloat { editorLineHeight * 4 + 24 } // 4 lines + vertical padding
     
     var body: some View {
@@ -43,161 +50,36 @@ struct BottomPromptBar: View {
             Divider()
                 .background(AppTheme.Colors.divider)
             
-            // Image Thumbnails Row (if images selected)
+            // Image thumbnails row (appears when photos are selected)
             if !selectedImages.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
-                            ImageThumbnailView(image: image) {
-                                removeImage(at: index)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                }
-                .background(AppTheme.Colors.background)
-                
-                Divider()
-                    .background(AppTheme.Colors.divider)
+                ImageThumbnailsRow(images: selectedImages, onDelete: removeImage)
             }
             
-            // Main container with language pill and search bar
-            ZStack(alignment: .topLeading) {
+            // Main search bar container
+            HStack(spacing: AppTheme.Spacing.sm) {
+                SearchBarContent(
+                    text: $text,
+                    placeholder: placeholder,
+                    isTextFieldFocused: $isTextFieldFocused,
+                    textEditorHeight: $textEditorHeight,
+                    isRecording: voiceRecorder.isRecording,
+                    minHeight: searchBarMinHeight,
+                    maxHeight: maxEditorHeight,
+                    onCameraTap: onCameraTap,
+                    onMicrophoneTap: handleMicrophoneTap,
+                    onStopRecording: handleStopRecording
+                )
                 
-                // Main search bar container
-                HStack(spacing: 0) {
-                    // Search bar content
-                    HStack(spacing: 0) {
-                        // Left side - Camera button (outline style)
-                        Button(action: onCameraTap) {
-                            Image(systemName: "camera")
-                                .font(.system(size: cameraIconSize, weight: .regular))
-                                .symbolVariant(.none) // Outline/stroke style
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                                .frame(width: uploadButtonSize, height: uploadButtonSize)
-                        }
-                        .accessibilityLabel("Add photo or attachment")
-                        
-                        Spacer()
-                            .frame(width: 12)
-                        
-                        // Center - TextEditor with placeholder and dynamic height
-                        ZStack(alignment: .topLeading) {  // Changed from .leading to .topLeading
-                            // Placeholder text (shows when empty)
-                            if text.isEmpty && !isTextFieldFocused {
-                                Text(placeholder)
-                                    .font(.system(size: 17, weight: .regular))
-                                    .foregroundColor(microphoneInactive)
-                                    .padding(.horizontal, 5)  // Match TextEditor's horizontal padding
-                                    .padding(.vertical, 8)     // Match TextEditor's vertical padding
-                                    .allowsHitTesting(false)   // Allow taps to pass through to TextEditor
-                                    .transition(.opacity)
-                            }
-                            
-                            // Actual TextEditor
-                            TextEditor(text: $text)
-                                .font(.system(size: 17, weight: .regular))
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                                .tint(AppTheme.Colors.secondary)
-                                .scrollContentBackground(.hidden)  // Remove default gray background (iOS 16+)
-                                .background(Color.clear)           // Ensure transparent background
-                                .focused($isTextFieldFocused)
-                                .frame(
-                                    minHeight: searchBarHeight,
-                                    maxHeight: min(textEditorHeight, maxEditorHeight)
-                                )
-                                .background(
-                                    // Measure intrinsic height by mirroring text in a hidden Text
-                                    Text(text.isEmpty ? " " : text)
-                                        .font(.system(size: 17, weight: .regular))
-                                        .foregroundColor(.clear)
-                                        .padding(.vertical, 8)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(
-                                            GeometryReader { proxy in
-                                                Color.clear
-                                                    .onAppear {
-                                                        textEditorHeight = max(searchBarHeight, proxy.size.height + 24)
-                                                    }
-                                                    .onChange(of: text) { _, _ in
-                                                        textEditorHeight = max(searchBarHeight, proxy.size.height + 24)
-                                                    }
-                                            }
-                                        )
-                                        .hidden()
-                                )
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .animation(.easeInOut(duration: 0.2), value: textEditorHeight)  // Smooth height changes
-                        .animation(.easeIn(duration: 0.1), value: text.isEmpty)         // Smooth placeholder fade
-                        Spacer()
-                            .frame(width: 12)
-                        
-                        // Right side - Stop button (when recording) or Microphone button
-                        if voiceRecorder.isRecording {
-                            // Red stop button (no background overlays) with mic icon
-                            Button {
-                                handleStopRecording()
-                            } label: {
-                                ZStack {
-                                    Image(systemName: "mic.fill")
-                                        .font(.system(size: microphoneIconSize, weight: .regular))
-                                        .foregroundColor(microphoneActive)
-                                        .frame(width: uploadButtonSize, height: uploadButtonSize)
-                                }
-                            }
-                            .accessibilityLabel("Stop recording")
-                            .transition(.scale.combined(with: .opacity))
-                        } else {
-                            // Microphone button (inactive state)
-                            Button {
-                                handleMicrophoneTap()
-                            } label: {
-                                Image(systemName: "mic.fill")
-                                    .font(.system(size: microphoneIconSize, weight: .regular))
-                                    .foregroundColor(microphoneInactive)
-                                    .frame(width: uploadButtonSize, height: uploadButtonSize)
-                            }
-                            .accessibilityLabel("Start voice input")
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: searchBarHeight, maxHeight: min(textEditorHeight, maxEditorHeight))
-                    .background(AppTheme.Colors.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: searchBarCornerRadius, style: .continuous))
-                    .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
-                    
-                    Spacer()
-                        .frame(width: 12)
-                    
-                    // Far right - Upload/scroll button (outside search bar)
-                    Button(action: hasContent ? onSendTap : onFavoritesTap) {
-                        Image(systemName: hasContent ? "arrow.up" : "heart.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(width: uploadButtonSize, height: uploadButtonSize)
-                            .background(microphoneInactive)
-                            .clipShape(Circle())
-                    }
-                    .accessibilityLabel(hasContent ? "Submit" : "Favorites")
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                // Upload/favorites button (outside search bar)
+                UploadButton(hasContent: hasContent, onTap: hasContent ? onSendTap : onFavoritesTap)
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .padding(.vertical, AppTheme.Spacing.sm)
         }
         .background(AppTheme.Colors.background)
         .animation(.spring(response: 0.25, dampingFraction: 0.75), value: voiceRecorder.isRecording)
         .onChange(of: voiceRecorder.transcribedText) { _, newValue in
             text = newValue
-        }
-        .onChange(of: voiceRecorder.isRecording) { _, isRecording in
-            if isRecording || !text.isEmpty {
-                // no cursor blink anymore
-            } else {
-                // no cursor blink anymore
-            }
         }
         .alert("Microphone Access Required", isPresented: $voiceRecorder.showMicrophonePermissionAlert) {
             Button("Cancel", role: .cancel) { }
@@ -211,17 +93,18 @@ struct BottomPromptBar: View {
         }
     }
     
-    /// Determines if there's any content (text or images) to submit
+    // MARK: - Private Helpers
+    
     private var hasContent: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !selectedImages.isEmpty
     }
     
     private func handleMicrophoneTap() {
-        // Haptic feedback
+        // Provide haptic feedback before starting to give immediate user feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        // Small delay then start recording
+        // Small delay ensures haptic completes before audio session changes
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             voiceRecorder.startRecording()
         }
@@ -230,7 +113,7 @@ struct BottomPromptBar: View {
     private func handleStopRecording() {
         voiceRecorder.stopRecording()
         
-        // Haptic feedback
+        // Success haptic confirms recording completion
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
     }
@@ -241,25 +124,273 @@ struct BottomPromptBar: View {
     }
 }
 
+// MARK: - Search Bar Content
+
+/// Internal component for the search bar input area.
+/// Encapsulates camera button, text editor, and microphone/stop button.
+private struct SearchBarContent: View {
+    @Binding var text: String
+    let placeholder: String
+    var isTextFieldFocused: FocusState<Bool>.Binding
+    @Binding var textEditorHeight: CGFloat
+    let isRecording: Bool
+    let minHeight: CGFloat
+    let maxHeight: CGFloat
+    let onCameraTap: () -> Void
+    let onMicrophoneTap: () -> Void
+    let onStopRecording: () -> Void
+    
+    private let cameraIconSize: CGFloat = 28
+    private let iconSize: CGFloat = 24
+    private let buttonSize: CGFloat = 44
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            CameraButton(
+                size: buttonSize,
+                iconSize: cameraIconSize,
+                onTap: {
+                    isTextFieldFocused.wrappedValue = false
+                    onCameraTap()
+                }
+            )
+            
+            Spacer().frame(width: AppTheme.Spacing.sm)
+            
+            TextEditorWithPlaceholder(
+                text: $text,
+                placeholder: placeholder,
+                isFocused: isTextFieldFocused,
+                height: $textEditorHeight,
+                minHeight: minHeight,
+                maxHeight: maxHeight
+            )
+            
+            Spacer().frame(width: AppTheme.Spacing.sm)
+            
+            if isRecording {
+                StopRecordingButton(
+                    size: buttonSize,
+                    iconSize: iconSize,
+                    onTap: {
+                        isTextFieldFocused.wrappedValue = false
+                        onStopRecording()
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+            } else {
+                MicrophoneButton(
+                    size: buttonSize,
+                    iconSize: iconSize,
+                    onTap: {
+                        isTextFieldFocused.wrappedValue = false
+                        onMicrophoneTap()
+                    }
+                )
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .frame(minHeight: minHeight, maxHeight: maxHeight)
+        .background(AppTheme.Colors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+    }
+}
+
+// MARK: - Text Editor with Placeholder
+
+/// TextEditor wrapper that displays a placeholder when empty and measures content height.
+/// Uses a hidden Text view to measure intrinsic content height for dynamic sizing.
+private struct TextEditorWithPlaceholder: View {
+    @Binding var text: String
+    let placeholder: String
+    var isFocused: FocusState<Bool>.Binding
+    @Binding var height: CGFloat
+    let minHeight: CGFloat
+    let maxHeight: CGFloat
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Placeholder overlay (only visible when empty and not focused)
+            if text.isEmpty && !isFocused.wrappedValue {
+                Text(placeholder)
+                    .font(AppTheme.Typography.bodyMedium)
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 8)
+                    .allowsHitTesting(false) // Allow taps to pass through to TextEditor
+                    .transition(.opacity)
+            }
+            
+            // Actual TextEditor
+            TextEditor(text: $text)
+                .font(AppTheme.Typography.bodyMedium)
+                .foregroundColor(AppTheme.Colors.textPrimary)
+                .tint(AppTheme.Colors.textPrimary) // Cursor matches text color
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .focused(isFocused)
+                .frame(minHeight: minHeight, maxHeight: maxHeight)
+                .background(heightMeasurer)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: height)
+        .animation(.easeIn(duration: 0.1), value: text.isEmpty)
+    }
+    
+    // Hidden Text view used to measure content height
+    // SwiftUI TextEditor doesn't expose intrinsic content size, so we mirror the text
+    private var heightMeasurer: some View {
+        Text(text.isEmpty ? " " : text)
+            .font(AppTheme.Typography.bodyMedium)
+            .foregroundColor(.clear)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear {
+                            updateHeight(from: proxy.size.height)
+                        }
+                        .onChange(of: text) { _, _ in
+                            updateHeight(from: proxy.size.height)
+                        }
+                }
+            )
+            .hidden()
+    }
+    
+    private func updateHeight(from contentHeight: CGFloat) {
+        height = max(minHeight, contentHeight + 24) // 24pt for vertical padding
+    }
+}
+
+// MARK: - Camera Button
+
+private struct CameraButton: View {
+    let size: CGFloat
+    let iconSize: CGFloat
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "camera")
+                .font(.system(size: iconSize, weight: .regular))
+                .symbolVariant(.none) // Outline/stroke style
+                .foregroundColor(AppTheme.Colors.textPrimary)
+                .frame(width: size, height: size)
+        }
+        .accessibilityLabel("Add photo or attachment")
+    }
+}
+
+// MARK: - Microphone Button
+
+private struct MicrophoneButton: View {
+    let size: CGFloat
+    let iconSize: CGFloat
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: iconSize, weight: .regular))
+                .foregroundColor(AppTheme.Colors.textTertiary)
+                .frame(width: size, height: size)
+        }
+        .accessibilityLabel("Start voice input")
+    }
+}
+
+// MARK: - Stop Recording Button
+
+private struct StopRecordingButton: View {
+    let size: CGFloat
+    let iconSize: CGFloat
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: iconSize, weight: .regular))
+                .foregroundColor(AppTheme.Colors.destructive)
+                .frame(width: size, height: size)
+        }
+        .accessibilityLabel("Stop recording")
+    }
+}
+
+// MARK: - Upload Button
+
+private struct UploadButton: View {
+    let hasContent: Bool
+    let onTap: () -> Void
+    
+    private let size: CGFloat = 44
+    
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: hasContent ? "arrow.up" : "heart.fill")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundColor(.white)
+                .frame(width: size, height: size)
+                .background(AppTheme.Colors.textTertiary)
+                .clipShape(Circle())
+        }
+        .accessibilityLabel(hasContent ? "Submit" : "Favorites")
+    }
+}
+
+// MARK: - Image Thumbnails Row
+
+private struct ImageThumbnailsRow: View {
+    let images: [UIImage]
+    let onDelete: (Int) -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                        ImageThumbnailView(image: image) {
+                            onDelete(index)
+                        }
+                    }
+                }
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.vertical, AppTheme.Spacing.sm)
+            }
+            .background(AppTheme.Colors.background)
+            
+            Divider()
+                .background(AppTheme.Colors.divider)
+        }
+    }
+}
+
 // MARK: - Image Thumbnail View
 
-struct ImageThumbnailView: View {
+private struct ImageThumbnailView: View {
     let image: UIImage
     let onDelete: () -> Void
+    
+    private let size: CGFloat = 90
+    private let cornerRadius: CGFloat = 24
+    private let deleteButtonSize: CGFloat = 32
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
-                .frame(width: 90, height: 90)
-                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: cornerRadius)
                         .stroke(AppTheme.Colors.divider, lineWidth: 1)
                 )
             
-            // Delete Button
+            // Delete button
             Button(action: onDelete) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 28))
@@ -267,7 +398,7 @@ struct ImageThumbnailView: View {
                     .background(
                         Circle()
                             .fill(Color.black.opacity(0.7))
-                            .frame(width: 32, height: 32)
+                            .frame(width: deleteButtonSize, height: deleteButtonSize)
                     )
             }
             .offset(x: 8, y: -8)
@@ -277,8 +408,11 @@ struct ImageThumbnailView: View {
 
 // MARK: - Voice Recorder View Model
 
+/// Manages speech recognition state and audio recording.
+/// Handles permissions, audio session configuration, and real-time transcription.
 @MainActor
 class VoiceRecorderViewModel: NSObject, ObservableObject {
+    
     @Published var isRecording = false
     @Published var transcribedText = ""
     @Published var showMicrophonePermissionAlert = false
@@ -290,43 +424,24 @@ class VoiceRecorderViewModel: NSObject, ObservableObject {
     
     override init() {
         super.init()
-        speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: Locale.preferredLanguages.first ?? "en-US"))
+        // Initialize with device's preferred language for better accuracy
+        let preferredLocale = Locale(identifier: Locale.preferredLanguages.first ?? "en-US")
+        speechRecognizer = SFSpeechRecognizer(locale: preferredLocale)
     }
     
     func startRecording() {
-        // Check speech recognition authorization
         let speechAuthStatus = SFSpeechRecognizer.authorizationStatus()
         
         switch speechAuthStatus {
         case .authorized:
-            // Check microphone permission
-            if #available(iOS 17.0, *) {
-                AVAudioApplication.requestRecordPermission { [weak self] granted in
-                    DispatchQueue.main.async {
-                        if granted {
-                            self?.beginRecording()
-                        } else {
-                            self?.showMicrophonePermissionAlert = true
-                        }
-                    }
-                }
-            } else {
-                AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
-                    DispatchQueue.main.async {
-                        if granted {
-                            self?.beginRecording()
-                        } else {
-                            self?.showMicrophonePermissionAlert = true
-                        }
-                    }
-                }
-            }
+            requestMicrophonePermission()
         case .notDetermined:
+            // Request speech recognition permission first
             SFSpeechRecognizer.requestAuthorization { [weak self] authStatus in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     if authStatus == .authorized {
-                        self.startRecording()
+                        self.startRecording() // Recursively call after permission granted
                     } else {
                         self.showMicrophonePermissionAlert = true
                     }
@@ -337,20 +452,36 @@ class VoiceRecorderViewModel: NSObject, ObservableObject {
         }
     }
     
-    private func beginRecording() {
-        // Cancel any ongoing recognition task
-        if recognitionTask != nil {
-            recognitionTask?.cancel()
-            recognitionTask = nil
+    private func requestMicrophonePermission() {
+        let requestPermission: (Bool) -> Void = { [weak self] granted in
+            DispatchQueue.main.async {
+                if granted {
+                    self?.beginRecording()
+                } else {
+                    self?.showMicrophonePermissionAlert = true
+                }
+            }
         }
         
-        // Stop audio engine if running
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission(completionHandler: requestPermission)
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission(requestPermission)
+        }
+    }
+    
+    private func beginRecording() {
+        // Clean up any existing recognition task
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        
+        // Stop audio engine if already running
         if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
         }
         
-        // Configure audio session
+        // Configure audio session for recording
         let audioSession = AVAudioSession.sharedInstance()
         do {
             try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
@@ -359,18 +490,16 @@ class VoiceRecorderViewModel: NSObject, ObservableObject {
             return
         }
         
-        // Create recognition request
+        // Create recognition request with partial results enabled for real-time updates
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else { return }
-        
         recognitionRequest.shouldReportPartialResults = true
         
-        // Configure audio engine
+        // Configure audio engine tap
         let inputNode = audioEngine.inputNode
         inputNode.removeTap(onBus: 0)
         
         let recordingFormat = inputNode.outputFormat(forBus: 0)
-        
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
@@ -396,11 +525,10 @@ class VoiceRecorderViewModel: NSObject, ObservableObject {
             
             if let result = result {
                 DispatchQueue.main.async {
-                    // Always update with the latest transcription
                     self.transcribedText = result.bestTranscription.formattedString
                 }
                 
-                // If result is final, we can stop early
+                // Auto-stop when final result is received
                 if result.isFinal {
                     DispatchQueue.main.async {
                         self.stopRecording()
@@ -417,36 +545,26 @@ class VoiceRecorderViewModel: NSObject, ObservableObject {
     }
     
     func stopRecording() {
-        // Mark as not recording immediately to update UI
         isRecording = false
-        
-        // End the recognition request (this triggers final result)
         recognitionRequest?.endAudio()
         
-        // Give a brief moment for final transcription to complete
+        // Brief delay allows final transcription to complete before cleanup
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self = self else { return }
             
-            // Stop audio engine
             if self.audioEngine.isRunning {
                 self.audioEngine.stop()
             }
             
-            // Remove tap
             self.audioEngine.inputNode.removeTap(onBus: 0)
-            
-            // Finish recognition task (don't cancel, let it complete)
             self.recognitionTask?.finish()
-            
-            // Clear references
             self.recognitionRequest = nil
             self.recognitionTask = nil
             
-            // Deactivate audio session
             do {
                 try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             } catch {
-                // Silently fail
+                // Silently fail - audio session cleanup is not critical
             }
         }
     }

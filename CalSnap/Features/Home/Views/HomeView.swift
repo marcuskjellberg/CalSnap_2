@@ -18,7 +18,7 @@ struct HomeView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Main content
+            // Main content (tappable to dismiss keyboard)
             ScrollView {
                 VStack(spacing: 0) {
                     // Custom Navigation Header with Icon
@@ -120,6 +120,13 @@ struct HomeView: View {
                 .padding(.bottom, 100) // Space for bottom bar
             }
             .background(AppTheme.Colors.background)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded { _ in
+                    // Dismiss keyboard when tapping on scroll view content
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            )
             
             // Bottom Input Bar (always visible)
             BottomPromptBar(
