@@ -115,12 +115,12 @@ struct SwipeableCard<Content: View>: View {
                 .highPriorityGesture(actions.isEmpty ? nil : dragGesture)
                 .zIndex(isRevealed ? 1 : 5) // Lower zIndex when revealed so buttons can be tapped
                 .allowsHitTesting(true)
-                .onTapGesture {
-                    // Dismiss actions when card is tapped and revealed
-                    if isRevealed {
+                // When revealed, intercept taps to dismiss actions instead of navigating
+                .highPriorityGesture(
+                    isRevealed ? TapGesture().onEnded { _ in
                         dismissActions()
-                    }
-                }
+                    } : nil
+                )
             
             // Background tap area - only catches taps outside buttons and card
             // We don't need this as the card's tap gesture handles dismiss
