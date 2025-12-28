@@ -16,6 +16,8 @@ struct ColorPalette {
         static let green = Color("BrandGreen")
         static let orange = Color("BrandOrange")
         static let red = Color("BrandRed")
+        static let golden = Color(hex: "#FFD60A")  // Primary accent for active states
+        static let goldenBorder = Color(hex: "#FFC107")  // Slightly darker golden for borders
     }
     
     // MARK: - Layer 2: Domain Colors (macros, health)

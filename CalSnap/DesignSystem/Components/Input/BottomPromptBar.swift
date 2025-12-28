@@ -191,9 +191,19 @@ private struct SearchBarContent: View {
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .frame(minHeight: minHeight, maxHeight: maxHeight)
-        .background(AppTheme.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(
+                            isRecording ? AppTheme.Colors.accent : .white.opacity(0.2),
+                            lineWidth: isRecording ? 2 : 1
+                        )
+                )
+                .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        )
+        .animation(.easeInOut(duration: 0.2), value: isRecording)
     }
 }
 

@@ -17,6 +17,8 @@ enum AppTheme {
         static let primary = ColorPalette.Brand.green
         static let secondary = ColorPalette.Brand.orange
         static let destructive = ColorPalette.Brand.red
+        static let accent = ColorPalette.Brand.golden  // Golden accent for active/selected states
+        static let accentBorder = ColorPalette.Brand.goldenBorder  // Golden border variant
         
         // Nutrition macros (Domain layer)
         static let calories = ColorPalette.Domain.calories

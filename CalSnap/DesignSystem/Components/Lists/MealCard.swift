@@ -18,23 +18,24 @@ struct MealCard: View {
     let time: String
     let image: Image?
     
+    private let cornerRadius: CGFloat = AppTheme.CornerRadius.lg
+    
     var body: some View {
-        CardContainer(padding: 0) {
-            HStack(spacing: AppTheme.Spacing.sm) {
+        CardContainer(padding: 0, cornerRadius: cornerRadius, isActive: true) {
+            HStack(spacing: 0) {
                 // Leading image (or placeholder)
                 MealImageView(image: image)
                 
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                    // Title + time header
-                    HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.sm) {
-                        Text(title)
-                            .font(AppTheme.Typography.heading3)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .minimumScaleFactor(0.8)
-                            .allowsTightening(true)
-                    }
+                    // Title
+                    Text(title)
+                        .font(AppTheme.Typography.heading3)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
+                    
                     HStack(alignment: .center, spacing: AppTheme.Spacing.xs) {
                         // Macro summary row
                         MacroPillRow(calories: calories, protein: protein, carbs: carbs, fat: fat)
@@ -45,11 +46,14 @@ struct MealCard: View {
                             .lineLimit(1)
                     }
                 }
-                .padding(.trailing, AppTheme.Spacing.sm)
+                .padding(.horizontal, AppTheme.Spacing.sm)
+                .padding(.vertical, AppTheme.Spacing.sm)
+                
+                Spacer(minLength: 0)
             }
         }
-        // Fixed card height to align in lists; adjust if dynamic height is desired.
         .frame(height: 100)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
@@ -67,9 +71,10 @@ private struct MealImageView: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 ZStack {
-                    AppTheme.Colors.imagePlaceholder
+                    //AppTheme.Colors.imagePlaceholder
+                    AppTheme.Colors.secondary
                     Image(systemName: "photo")
-                        .foregroundColor(AppTheme.Colors.textTertiary)
+                        .foregroundColor(AppTheme.Colors.primary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Meal image placeholder")

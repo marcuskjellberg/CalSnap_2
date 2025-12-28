@@ -9,7 +9,7 @@ struct HealthScoreCard: View {
     var allergenWarning: String?
     
     var body: some View {
-        CardContainer(backgroundColor: statusColor.opacity(0.05)) {
+        CardContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 // Header with icon
                 HStack(spacing: AppTheme.Spacing.xs) {
