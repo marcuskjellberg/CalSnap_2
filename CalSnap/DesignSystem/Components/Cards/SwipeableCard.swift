@@ -115,11 +115,21 @@ struct SwipeableCard<Content: View>: View {
                 .highPriorityGesture(actions.isEmpty ? nil : dragGesture)
                 .zIndex(isRevealed ? 1 : 5) // Lower zIndex when revealed so buttons can be tapped
                 .allowsHitTesting(true)
-                // When revealed, intercept taps to dismiss actions instead of navigating
-                .highPriorityGesture(
-                    isRevealed ? TapGesture().onEnded { _ in
-                        dismissActions()
-                    } : nil
+                .overlay(
+                    // Invisible overlay that captures taps when revealed and has high priority
+                    // This overlay sits on top and intercepts taps to collapse the card
+                    Group {
+                        if isRevealed {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .highPriorityGesture(
+                                    TapGesture()
+                                        .onEnded { _ in
+                                            dismissActions()
+                                        }
+                                )
+                        }
+                    }
                 )
             
             // Background tap area - only catches taps outside buttons and card
@@ -150,7 +160,6 @@ struct SwipeableCard<Content: View>: View {
         HStack(spacing: 8) {
             // Leading padding
             Spacer()
-  
                 .frame(width: 8)
             
             ForEach(Array(actions.enumerated()), id: \.element.id) { index, action in
@@ -164,20 +173,63 @@ struct SwipeableCard<Content: View>: View {
                         }
                     ),
                     cardHeight: cardHeight,
-                    cardOffset: abs(currentOffset), // Pass absolute offset
-                    buttonIndex: index,
-                    totalButtons: actions.count, // Pass total count for proper reversal
-                    buttonSize: 44,
-                    buttonSpacing: 8
+                    revealProgress: buttonRevealProgress(for: index)
                 )
             }
             
             // Trailing padding
-            //Spacer()
-              //  .frame(width: 8)
+            Spacer()
+            //    .frame(width: 8)
+                .frame(width: 1)
         }
         .frame(width: totalRevealWidth, alignment: .trailing)
         .allowsHitTesting(isRevealed && !isDragging) // Only allow taps when revealed and not dragging
+    }
+    
+    /// Calculates the reveal progress for a specific button based on when the card passes its center
+    /// - Parameter buttonIndex: Index of the button in the actions array
+    /// - Returns: Progress from 0.0 to 1.0, where 0.0 means button center hasn't been passed yet
+    /// 
+    /// Note: Buttons in the array are rendered left-to-right in the HStack, but we want the
+    /// rightmost button (last in array) to reveal first. So we reverse the calculation.
+    private func buttonRevealProgress(for buttonIndex: Int) -> CGFloat {
+        guard buttonIndex < actions.count else { return 0 }
+        
+        let buttonWidth: CGFloat = 44
+        let buttonSpacing: CGFloat = 8
+        let sidePadding: CGFloat = 8
+        
+        // Reverse the index so the last button (rightmost) reveals first
+        // For 3 buttons: [0=Add, 1=Favorite, 2=Delete]
+        // We want Delete (index 2) to reveal first, so reverseIndex = 0
+        let reverseIndex = actions.count - 1 - buttonIndex
+        
+        // Calculate the center position of this button from the trailing (right) edge
+        // Rightmost button (reverseIndex 0) starts closest to the edge
+        var centerFromTrailing: CGFloat = sidePadding + buttonWidth / 2
+        
+        // Add spacing for buttons that come before this one (to the right of it)
+        for _ in 0..<reverseIndex {
+            centerFromTrailing += buttonWidth + buttonSpacing
+        }
+        
+        // The absolute offset of the card (how far left it has moved, so negative becomes positive)
+        let absoluteOffset = abs(currentOffset)
+        
+        // Calculate progress: 0 when card hasn't reached center, 1 when fully passed
+        // Use a smooth interpolation from 0 to 1 over the button width
+        let progressStart = centerFromTrailing - buttonWidth / 2
+        let progressEnd = centerFromTrailing + buttonWidth / 2
+        
+        if absoluteOffset < progressStart {
+            return 0
+        } else if absoluteOffset > progressEnd {
+            return 1
+        } else {
+            // Linear interpolation between start and end
+            let normalizedProgress = (absoluteOffset - progressStart) / (progressEnd - progressStart)
+            return normalizedProgress
+        }
     }
     
     // MARK: - Gesture

@@ -11,19 +11,25 @@ struct QuantitySlider: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-            HStack {
-                Text(label)
-                    .font(AppTheme.Typography.bodySmall)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                
-                Spacer()
-                
-                Text("\(Int(value)) \(unit)")
-                    .font(AppTheme.Typography.numberSmall)
-                    .foregroundColor(AppTheme.Colors.textPrimary)
+            if !label.isEmpty || !unit.isEmpty {
+                HStack {
+                    if !label.isEmpty {
+                        Text(label)
+                            .font(AppTheme.Typography.bodySmall)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if !unit.isEmpty {
+                        Text("\(Int(value)) \(unit)")
+                            .font(AppTheme.Typography.numberSmall)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(label.isEmpty ? "" : label + ": ")\(Int(value)) \(unit.isEmpty ? "" : unit)")
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(label): \(Int(value)) \(unit)")
             
             Slider(value: $value, in: range, step: step)
                 .tint(AppTheme.Colors.primary)
@@ -31,7 +37,7 @@ struct QuantitySlider: View {
                     let generator = UIImpactFeedbackGenerator(style: .light)
                     generator.impactOccurred()
                 }
-                .accessibilityValue("\(Int(value)) \(unit)")
+                .accessibilityValue("\(Int(value))\(unit.isEmpty ? "" : " \(unit)")")
         }
     }
 }
