@@ -16,9 +16,19 @@ class HomeViewModel: ObservableObject {
     
     // MARK: - Published Properties
     
-    @Published var meals: [Meal] = MockData.sampleMeals
+    @Published var selectedDate: Date = Date() {
+        didSet {
+            loadMealsForSelectedDate()
+        }
+    }
+    
+    @Published var meals: [Meal] = []
     @Published var dailyProgress: DailyProgress = MockData.sampleDailyProgress
     @Published var inputText: String = ""
+    
+    // MARK: - Private Properties
+    
+    private let calendar = Calendar.current
     
     // MARK: - Computed Properties
     
@@ -33,14 +43,35 @@ class HomeViewModel: ObservableObject {
     // MARK: - Initializer
     
     init() {
-        // Initialize with mock data
-        updateDailyProgress()
+        // Initialize with today's meals
+        loadMealsForSelectedDate()
     }
     
     // MARK: - Actions
     
+    /// Loads meals for the currently selected date
+    func loadMealsForSelectedDate() {
+        meals = MockData.meals(for: selectedDate)
+        updateDailyProgress()
+    }
+    
+    /// Updates the selected date and loads meals for that date
+    func selectDate(_ date: Date) {
+        // Normalize to start of day to ensure consistency
+        let normalizedDate = calendar.startOfDay(for: date)
+        // Assign to trigger didSet which will call loadMealsForSelectedDate()
+        selectedDate = normalizedDate
+    }
+    
     /// Adds a dummy meal when user taps send (for UI testing)
+    /// Note: This adds to today's date only
     func addDummyMeal() {
+        let calendar = Calendar.current
+        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
+        
+        // Only allow adding meals to today
+        guard isToday else { return }
+        
         let dummyMeal = Meal(
             timestamp: Date(),
             mealType: .snack,
@@ -61,6 +92,7 @@ class HomeViewModel: ObservableObject {
         )
         
         meals.append(dummyMeal)
+        meals.sort { $0.timestamp < $1.timestamp }
         updateDailyProgress()
         inputText = ""
     }
@@ -70,18 +102,26 @@ class HomeViewModel: ObservableObject {
         dailyProgress = DailyProgress.from(
             meals: meals,
             goals: dailyProgress.goals,
-            date: dailyProgress.date
+            date: selectedDate
         )
     }
     
     /// Clears all meals (for testing empty state)
+    /// Note: This only clears today's meals
     func clearMeals() {
-        meals = []
-        updateDailyProgress()
+        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
+        if isToday {
+            meals = []
+            updateDailyProgress()
+        }
     }
     
     /// Sets meals to a large collection (for testing scroll)
+    /// Note: This only works for today
     func setManyMeals() {
+        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
+        guard isToday else { return }
+        
         var manyMeals: [Meal] = []
         
         // Add meals throughout the day
@@ -101,7 +141,6 @@ class HomeViewModel: ObservableObject {
             "Rice Bowl"
         ]
         
-        let calendar = Calendar.current
         var hour = 7
         
         for (index, mealName) in mealNames.enumerated() {

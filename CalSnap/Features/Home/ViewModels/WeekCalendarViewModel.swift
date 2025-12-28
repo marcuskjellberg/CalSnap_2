@@ -11,11 +11,14 @@ import Combine
 
 @MainActor
 class WeekCalendarViewModel: ObservableObject {
-    var objectWillChange: ObservableObjectPublisher = ObservableObjectPublisher()
-    
     @Published var selectedDate: Date
     @Published var currentWeekStart: Date
     @Published var weekDays: [DayData] = []
+    
+    // MARK: - Private Properties
+    
+    private let calendar = Calendar.current
+    private let goals = MockData.sampleDailyGoals
     
     // MARK: - Computed Properties
     
@@ -32,18 +35,23 @@ class WeekCalendarViewModel: ObservableObject {
     }
     
     var canGoNext: Bool {
-        // Allow going forward up to today's week
-        let calendar = Calendar.current
-        let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return currentWeekStart < todayWeekStart || calendar.isDate(currentWeekStart, inSameDayAs: todayWeekStart)
+        // Prevent going into future weeks
+        let today = Date()
+        let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        // Can go next if current week is before today's week
+        return currentWeekStart < todayWeekStart
     }
     
     // MARK: - Initializer
     
     init(selectedDate: Date = Date()) {
-        self.selectedDate = selectedDate
-        let calendar = Calendar.current
-        self.currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        let normalizedDate = calendar.startOfDay(for: selectedDate)
+        self.selectedDate = normalizedDate
+        if let weekStart = calendar.dateInterval(of: .weekOfYear, for: normalizedDate)?.start {
+            self.currentWeekStart = calendar.startOfDay(for: weekStart)
+        } else {
+            self.currentWeekStart = normalizedDate
+        }
         generateWeekDays()
     }
     
@@ -51,33 +59,54 @@ class WeekCalendarViewModel: ObservableObject {
     
     func previousWeek() {
         let calendar = Calendar.current
-        currentWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeekStart) ?? currentWeekStart
+        let newWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeekStart) ?? currentWeekStart
+        currentWeekStart = calendar.startOfDay(for: newWeekStart)
+        // Select first day of new week (normalized)
+        selectedDate = currentWeekStart
         generateWeekDays()
     }
     
     func nextWeek() {
         guard canGoNext else { return }
         let calendar = Calendar.current
-        currentWeekStart = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart) ?? currentWeekStart
-        generateWeekDays()
-    }
-    
-    func selectDate(_ date: Date) {
-        selectedDate = date
-        // If selected date is in a different week, update current week
-        let calendar = Calendar.current
-        if let weekStart = calendar.dateInterval(of: .weekOfYear, for: date)?.start,
-           !calendar.isDate(weekStart, inSameDayAs: currentWeekStart) {
-            currentWeekStart = weekStart
+        let newWeekStart = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart) ?? currentWeekStart
+        let today = Date()
+        let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        let normalizedNewWeekStart = calendar.startOfDay(for: newWeekStart)
+        
+        // Only allow going to today's week or earlier
+        if normalizedNewWeekStart <= todayWeekStart {
+            currentWeekStart = normalizedNewWeekStart
+            // Select first day of new week, but don't go past today
+            let firstDayOfWeek = currentWeekStart
+            let todayStart = calendar.startOfDay(for: today)
+            selectedDate = firstDayOfWeek > todayStart ? todayStart : firstDayOfWeek
             generateWeekDays()
         }
     }
     
-    // MARK: - Private Methods
-    
-    private func generateWeekDays() {
-        let calendar = Calendar.current
+    func selectDate(_ date: Date) {
+        // Normalize to start of day
+        let normalizedDate = calendar.startOfDay(for: date)
         let today = Date()
+        
+        // Don't allow selecting future dates
+        if normalizedDate <= calendar.startOfDay(for: today) {
+            selectedDate = normalizedDate
+            // If selected date is in a different week, update current week
+            if let weekStart = calendar.dateInterval(of: .weekOfYear, for: normalizedDate)?.start,
+               !calendar.isDate(weekStart, inSameDayAs: currentWeekStart) {
+                currentWeekStart = weekStart
+                generateWeekDays()
+            }
+        }
+    }
+    
+    // MARK: - Public Methods
+    
+    func generateWeekDays() {
+        let today = Date()
+        let mealsByDate = MockData.mealsByDate()
         
         var days: [DayData] = []
         
@@ -94,10 +123,15 @@ class WeekCalendarViewModel: ObservableObject {
             let fullName = DayData.swedishFullNames[weekIndex]
             
             let isToday = calendar.isDate(date, inSameDayAs: today)
+            let dayStart = calendar.startOfDay(for: date)
             let isFuture = date > today
             
-            // Mock data - generate realistic progress values
-            let (status, completionPercentage, mealCount) = generateMockDayData(
+            // Get actual meals for this date
+            let dayMeals = mealsByDate[dayStart] ?? []
+            
+            // Calculate progress from actual meals
+            let (status, completionPercentage, mealCount) = calculateDayProgress(
+                meals: dayMeals,
                 date: date,
                 isToday: isToday,
                 isFuture: isFuture
@@ -120,46 +154,44 @@ class WeekCalendarViewModel: ObservableObject {
         weekDays = days
     }
     
-    /// Generates mock day data for demonstration
-    private func generateMockDayData(date: Date, isToday: Bool, isFuture: Bool) -> (DayStatus, Int, Int) {
-        let calendar = Calendar.current
-        let today = Date()
-        
+    /// Calculates day progress from actual meals data
+    private func calculateDayProgress(meals: [Meal], date: Date, isToday: Bool, isFuture: Bool) -> (DayStatus, Int, Int) {
         if isFuture {
             // Future days have no data
             return (.future, 0, 0)
         }
         
+        let mealCount = meals.count
+        
+        if mealCount == 0 {
+            // No meals logged
+            return (isToday ? .todayEmpty : .complete, 0, 0)
+        }
+        
+        // Calculate total calories consumed
+        let totalCalories = meals.reduce(0) { $0 + $1.totalCalories }
+        let calorieTarget = goals.calorieTarget
+        
+        // Calculate completion percentage (can exceed 100%)
+        let completionPercentage = Int((totalCalories / calorieTarget) * 100)
+        
+        // Determine status based on progress
+        let status: DayStatus
         if isToday {
-            // Today - check if we're in the afternoon (more likely to have data)
-            let hour = calendar.component(.hour, from: today)
-            if hour < 10 {
-                // Morning - likely empty or partial
-                return (.todayEmpty, 0, 0)
+            // Today: use partial or empty based on progress
+            if completionPercentage >= 80 {
+                status = .complete
+            } else if completionPercentage > 0 {
+                status = .todayPartial
             } else {
-                // Afternoon/evening - likely partial
-                let mockPercentage = Int.random(in: 16...95)
-                let mockMeals = mockPercentage > 20 ? Int.random(in: 1...3) : 0
-                let status: DayStatus = mockMeals == 0 ? .todayEmpty : .todayPartial
-                return (status, mockPercentage, mockMeals)
+                status = .todayEmpty
             }
-        }
-        
-        // Past days - generate random but realistic data
-        let daysAgo = calendar.dateComponents([.day], from: date, to: today).day ?? 0
-        
-        // Older days are more likely to be complete
-        if daysAgo > 1 {
-            let completionPercentage = Int.random(in: 70...120)
-            let mealCount = Int.random(in: 2...5)
-            return (.complete, completionPercentage, mealCount)
         } else {
-            // Yesterday might be complete or partial
-            let completionPercentage = Int.random(in: 16...112)
-            let mealCount = completionPercentage > 20 ? Int.random(in: 1...4) : 0
-            let status: DayStatus = completionPercentage > 80 ? .complete : .todayPartial
-            return (status, completionPercentage, mealCount)
+            // Past days: always complete (even if 0%)
+            status = .complete
         }
+        
+        return (status, completionPercentage, mealCount)
     }
 }
 

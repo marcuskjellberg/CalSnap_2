@@ -17,6 +17,7 @@ struct WeekCalendarView: View {
             HStack {
                 Button(action: {
                     viewModel.previousWeek()
+                    onDateSelected?(viewModel.selectedDate)
                     triggerHaptic(.light)
                 }) {
                     Image(systemName: "chevron.left")
@@ -36,6 +37,7 @@ struct WeekCalendarView: View {
                 
                 Button(action: {
                     viewModel.nextWeek()
+                    onDateSelected?(viewModel.selectedDate)
                     triggerHaptic(.light)
                 }) {
                     Image(systemName: "chevron.right")

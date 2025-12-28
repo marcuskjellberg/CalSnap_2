@@ -1,5 +1,8 @@
 import Foundation
 
+/// Cached meals by date dictionary (generated once for consistency)
+private var _cachedMealsByDate: [Date: [Meal]]?
+
 /// Centralized mock data for UI development and previews
 enum MockData {
     
@@ -496,5 +499,122 @@ enum MockData {
         enableLocationTracking: false,
         enableiCloudSync: true
     )
+    
+    // MARK: - Historical Meal Data (Last 14 Days)
+    
+    /// Returns all meals for the last 14 days, organized by date (day start)
+    /// Key: Date normalized to start of day
+    /// Value: Array of meals for that day
+    /// Results are cached for consistency across the app session
+    static func mealsByDate(forDays: Int = 14) -> [Date: [Meal]] {
+        if let cached = _cachedMealsByDate {
+            return cached
+        }
+        let calendar = Calendar.current
+        var mealsByDate: [Date: [Meal]] = [:]
+        let today = Date()
+        let goals = sampleDailyGoals
+        
+        // Meal templates with variety
+        let mealTemplates: [(name: String, mealType: MealType, calories: Double, protein: Double, carbs: Double, fat: Double)] = [
+            ("Greek Yogurt Bowl", .breakfast, 361, 21, 59, 6),
+            ("Oatmeal with Berries", .breakfast, 320, 12, 58, 8),
+            ("Scrambled Eggs & Toast", .breakfast, 380, 22, 35, 18),
+            ("Avocado Toast", .breakfast, 420, 15, 45, 22),
+            ("Protein Smoothie", .breakfast, 350, 30, 45, 8),
+            ("Grilled Salmon Salad", .lunch, 420, 41, 3, 27),
+            ("Chicken Caesar Salad", .lunch, 480, 38, 28, 26),
+            ("Turkey Sandwich", .lunch, 450, 32, 52, 14),
+            ("Quinoa Bowl", .lunch, 520, 18, 68, 18),
+            ("Beef Stir-Fry", .lunch, 580, 42, 45, 22),
+            ("Chicken Stir-Fry with Rice", .dinner, 580, 42, 65, 14),
+            ("Pasta with Marinara", .dinner, 520, 18, 95, 12),
+            ("Grilled Chicken Breast", .dinner, 450, 48, 8, 20),
+            ("Beef Burger", .dinner, 680, 38, 52, 32),
+            ("Vegetable Curry", .dinner, 420, 12, 68, 14),
+            ("Apple with Almond Butter", .snack, 267, 6, 32, 15),
+            ("Coffee with Milk", .snack, 20, 1, 2, 1),
+            ("Mixed Nuts", .snack, 180, 6, 8, 15),
+            ("Protein Bar", .snack, 200, 20, 22, 6),
+            ("Greek Yogurt", .snack, 100, 17, 6, 0)
+        ]
+        
+        // Generate meals for each of the last 14 days
+        for dayOffset in 0..<forDays {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+            let dayStart = calendar.startOfDay(for: date)
+            
+            // Determine number of meals based on day offset (more recent days have more data)
+            var mealCount: Int
+            if dayOffset == 0 {
+                // Today - might be partial
+                let hour = calendar.component(.hour, from: today)
+                mealCount = hour < 10 ? 0 : (hour < 16 ? 2 : Int.random(in: 2...4))
+            } else if dayOffset == 1 {
+                // Yesterday - likely complete
+                mealCount = Int.random(in: 3...5)
+            } else {
+                // Older days - variable
+                mealCount = Int.random(in: 0...5)
+            }
+            
+            var dayMeals: [Meal] = []
+            
+            // Generate meals for this day
+            for mealIndex in 0..<mealCount {
+                let template = mealTemplates[(dayOffset * 3 + mealIndex) % mealTemplates.count]
+                
+                // Vary meal times throughout the day
+                let hour = [8, 10, 12, 15, 19][mealIndex % 5]
+                let minute = Int.random(in: 0...59)
+                
+                guard let mealTimestamp = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) else { continue }
+                
+                // Add some variation to nutrition values (±10%)
+                let variation = 1.0 + (Double.random(in: -0.1...0.1))
+                let meal = Meal(
+                    timestamp: mealTimestamp,
+                    mealType: template.mealType,
+                    name: template.name,
+                    summary: "\(template.name) from \(dayOffset) days ago",
+                    calories: template.calories * variation,
+                    protein: template.protein * variation,
+                    carbs: template.carbs * variation,
+                    fat: template.fat * variation,
+                    fiber: Double.random(in: 3...8),
+                    healthScore: .good,
+                    healthInsights: [],
+                    allergens: [],
+                    dietaryTags: [],
+                    confidence: .high,
+                    components: []
+                )
+                
+                dayMeals.append(meal)
+            }
+            
+            // Sort meals by timestamp
+            dayMeals.sort { $0.timestamp < $1.timestamp }
+            
+            if !dayMeals.isEmpty {
+                mealsByDate[dayStart] = dayMeals
+            }
+        }
+        
+        _cachedMealsByDate = mealsByDate
+        return mealsByDate
+    }
+    
+    /// Returns all meals from the last 14 days as a flat array
+    static var historicalMeals: [Meal] {
+        mealsByDate().values.flatMap { $0 }
+    }
+    
+    /// Returns meals for a specific date
+    static func meals(for date: Date) -> [Meal] {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: date)
+        return mealsByDate()[dayStart] ?? []
+    }
 }
 

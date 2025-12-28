@@ -21,8 +21,9 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     // Week Calendar
                     WeekCalendarView(viewModel: calendarViewModel) { selectedDate in
-                        // Handle date selection - for now just update viewModel if needed
-                        // In the future, this will load meals for the selected date
+                        // Update HomeViewModel when date is selected
+                        // Note: calendarViewModel.selectDate is already called in WeekCalendarView
+                        viewModel.selectDate(selectedDate)
                     }
                     .padding(.top, AppTheme.Spacing.xs)
                     
@@ -35,7 +36,8 @@ struct HomeView: View {
                         carbsConsumed: viewModel.dailyProgress.carbsConsumed,
                         carbsTarget: viewModel.dailyProgress.goals.carbsTarget,
                         fatConsumed: viewModel.dailyProgress.fatConsumed,
-                        fatTarget: viewModel.dailyProgress.goals.fatTarget
+                        fatTarget: viewModel.dailyProgress.goals.fatTarget,
+                        mealCount: viewModel.mealCount
                     )
                     .padding(.horizontal, AppTheme.Spacing.md)
                     .padding(.top, AppTheme.Spacing.md)
@@ -43,7 +45,7 @@ struct HomeView: View {
                     // Meals Section
                     if viewModel.hasMeals {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                            Text("Today's Meals")
+                            Text(mealsSectionTitle)
                                 .font(AppTheme.Typography.heading2)
                                 .foregroundColor(AppTheme.Colors.textPrimary)
                                 .padding(.horizontal, AppTheme.Spacing.md)
@@ -73,11 +75,11 @@ struct HomeView: View {
                                 .font(.system(size: 48))
                                 .foregroundColor(AppTheme.Colors.textTertiary)
                             
-                            Text("No meals logged today")
+                            Text(emptyStateTitle)
                                 .font(AppTheme.Typography.heading3)
                                 .foregroundColor(AppTheme.Colors.textSecondary)
                             
-                            Text("Add your first meal using the input below")
+                            Text(emptyStateMessage)
                                 .font(AppTheme.Typography.bodyMedium)
                                 .foregroundColor(AppTheme.Colors.textTertiary)
                                 .multilineTextAlignment(.center)
@@ -90,17 +92,19 @@ struct HomeView: View {
             }
             .background(AppTheme.Colors.background)
             
-            // Bottom Input Bar
-            BottomPromptBar(
-                text: $viewModel.inputText,
-                placeholder: "Add meal...",
-                onCameraTap: { /* Camera action */ },
-                onFavoritesTap: { /* Favorites action */ },
-                onVoiceTap: { /* Voice action */ },
-                onSendTap: {
-                    viewModel.addDummyMeal()
-                }
-            )
+            // Bottom Input Bar (only show for today)
+            if Calendar.current.isDate(viewModel.selectedDate, inSameDayAs: Date()) {
+                BottomPromptBar(
+                    text: $viewModel.inputText,
+                    placeholder: "Add meal...",
+                    onCameraTap: { /* Camera action */ },
+                    onFavoritesTap: { /* Favorites action */ },
+                    onVoiceTap: { /* Voice action */ },
+                    onSendTap: {
+                        viewModel.addDummyMeal()
+                    }
+                )
+            }
         }
         .navigationTitle("CalSnap")
         .navigationBarTitleDisplayMode(.large)
@@ -114,6 +118,45 @@ struct HomeView: View {
                         .foregroundColor(AppTheme.Colors.textPrimary)
                 }
             }
+        }
+        .onAppear {
+            // Sync initial selected date
+            viewModel.selectDate(calendarViewModel.selectedDate)
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var mealsSectionTitle: String {
+        let calendar = Calendar.current
+        if calendar.isDate(viewModel.selectedDate, inSameDayAs: Date()) {
+            return "Today's Meals"
+        } else if calendar.isDateInYesterday(viewModel.selectedDate) {
+            return "Yesterday's Meals"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE, MMM d"
+            return formatter.string(from: viewModel.selectedDate) + "'s Meals"
+        }
+    }
+    
+    private var emptyStateTitle: String {
+        let calendar = Calendar.current
+        if calendar.isDate(viewModel.selectedDate, inSameDayAs: Date()) {
+            return "No meals logged today"
+        } else if calendar.isDateInYesterday(viewModel.selectedDate) {
+            return "No meals logged yesterday"
+        } else {
+            return "No meals logged"
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        let calendar = Calendar.current
+        if calendar.isDate(viewModel.selectedDate, inSameDayAs: Date()) {
+            return "Add your first meal using the input below"
+        } else {
+            return "No meals were logged on this day"
         }
     }
 }
